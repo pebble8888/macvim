@@ -7247,7 +7247,7 @@ ex_win_close(forceit, win, tp)
 	if ((p_confirm || cmdmod.confirm) && p_write)
 	{
 	    dialog_changed(buf, FALSE);
-	    if (buf_valid(buf) && bufIsChanged(buf))
+	    if (vimbuf_valid(buf) && bufIsChanged(buf))
 		return;
 	    need_hide = FALSE;
 	}

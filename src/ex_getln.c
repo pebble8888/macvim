@@ -6559,7 +6559,7 @@ ex_window()
 
     /* Safety check: The old window or buffer was deleted: It's a bug when
      * this happens! */
-    if (!win_valid(old_curwin) || !buf_valid(old_curbuf))
+    if (!win_valid(old_curwin) || !vimbuf_valid(old_curbuf))
     {
 	cmdwin_result = Ctrl_C;
 	EMSG(_("E199: Active window or buffer deleted"));
@@ -6632,7 +6632,7 @@ ex_window()
 
 	/* win_close() may have already wiped the buffer when 'bh' is
 	 * set to 'wipe' */
-	if (buf_valid(bp))
+	if (vimbuf_valid(bp))
 	    close_buffer(NULL, bp, DOBUF_WIPE, FALSE);
 
 	/* Restore window sizes. */

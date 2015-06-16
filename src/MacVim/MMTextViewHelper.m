@@ -780,6 +780,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 
 - (void)setImControl:(BOOL)enable
 {
+    NSLog( @"setImControl enable[%d]", enable );
     // This flag corresponds to the (negation of the) 'imd' option.  When
     // enabled changes to the input method are detected and forwarded to the
     // backend.  On >=10.5 and later we do not forward changes to the input
@@ -863,6 +864,10 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 {
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
     if (imControl && NULL != TISCopyCurrentKeyboardInputSource) {
+        
+       
+        NSLog( @"something" );
+        
         // We get here when compiled on >=10.5 and running on >=10.5.
         TISInputSourceRef cur = TISCopyCurrentKeyboardInputSource();
         BOOL state = !KeyboardInputSourcesEqual(asciiImSource, cur);
@@ -1126,8 +1131,10 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 
 - (void)sendMarkedText:(NSString *)text position:(int32_t)pos
 {
-    if (![self useInlineIm])
+    if (![self useInlineIm]){
+        NSLog( @"useInlineIm は使っていない" );
         return;
+    }
 
     NSMutableData *data = [NSMutableData data];
     unsigned len = text == nil ? 0
@@ -1145,7 +1152,13 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 
 - (void)abandonMarkedText
 {
+    NSLog( @"abandonMarkedText" );
     [self unmarkText];
+
+    // ありのままへ
+    // こまった困ったちゃん
+    // なんでしょうかこれは
+    // むーむーむーまみむめも
 
     // Send an empty marked text message with position set to -1 to indicate
     // that the marked text should be abandoned.  (If pos is set to 0 Vim will

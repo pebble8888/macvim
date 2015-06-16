@@ -2982,7 +2982,7 @@ do_wqall(eap)
 		    ++error;
 #ifdef FEAT_AUTOCMD
 		/* an autocommand may have deleted the buffer */
-		if (!buf_valid(buf))
+		if (!vimbuf_valid(buf))
 		    buf = firstbuf;
 #endif
 	    }
@@ -3398,7 +3398,7 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
 	    (void)buf_check_timestamp(buf, FALSE);
 	    /* Check if autocommands made buffer invalid or changed the current
 	     * buffer. */
-	    if (!buf_valid(buf)
+	    if (!vimbuf_valid(buf)
 #ifdef FEAT_AUTOCMD
 		    || curbuf != old_curbuf
 #endif
@@ -3442,7 +3442,7 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
 		new_name = vim_strsave(buf->b_fname);
 	    au_new_curbuf = buf;
 	    apply_autocmds(EVENT_BUFLEAVE, NULL, NULL, FALSE, curbuf);
-	    if (!buf_valid(buf))	/* new buffer has been deleted */
+	    if (!vimbuf_valid(buf))	/* new buffer has been deleted */
 	    {
 		delbuf_msg(new_name);	/* frees new_name */
 		goto theend;
@@ -3483,7 +3483,7 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
 		}
 # endif
 		/* Be careful again, like above. */
-		if (!buf_valid(buf))	/* new buffer has been deleted */
+		if (!vimbuf_valid(buf))	/* new buffer has been deleted */
 		{
 		    delbuf_msg(new_name);	/* frees new_name */
 		    goto theend;
@@ -3618,7 +3618,7 @@ do_ecmd(fnum, ffname, sfname, eap, newlnum, flags, oldwin)
 #ifdef FEAT_AUTOCMD
 	/* If autocommands deleted the buffer we were going to re-edit, give
 	 * up and jump to the end. */
-	if (!buf_valid(buf))
+	if (!vimbuf_valid(buf))
 	{
 	    delbuf_msg(new_name);	/* frees new_name */
 	    goto theend;

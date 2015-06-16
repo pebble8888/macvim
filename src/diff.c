@@ -791,7 +791,7 @@ ex_diffupdate(eap)
 	for (idx_new = idx_orig; idx_new < DB_COUNT; ++idx_new)
 	{
 	    buf = curtab->tp_diffbuf[idx_new];
-	    if (buf_valid(buf))
+	    if (vimbuf_valid(buf))
 		buf_check_timestamp(buf, FALSE);
 	}
 

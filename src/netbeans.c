@@ -2630,7 +2630,7 @@ nb_do_cmd(
 		    buf_write_all(buf->bufp, FALSE);
 #ifdef FEAT_AUTOCMD
 		    /* an autocommand may have deleted the buffer */
-		    if (!buf_valid(buf->bufp))
+		    if (!vimbuf_valid(buf->bufp))
 			buf->bufp = NULL;
 #endif
 		}

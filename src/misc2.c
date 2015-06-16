@@ -1171,7 +1171,7 @@ free_all_mem()
     {
 	nextbuf = buf->b_next;
 	close_buffer(NULL, buf, DOBUF_WIPE, FALSE);
-	if (buf_valid(buf))
+	if (vimbuf_valid(buf))
 	    buf = nextbuf;	/* didn't work, try next one */
 	else
 	    buf = firstbuf;

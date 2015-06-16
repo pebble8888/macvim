@@ -1513,7 +1513,7 @@ getout(exitval)
 	    {
 		apply_autocmds(EVENT_BUFUNLOAD, buf->b_fname, buf->b_fname,
 								  FALSE, buf);
-		if (!buf_valid(buf))	/* autocmd may delete the buffer */
+		if (!vimbuf_valid(buf))	/* autocmd may delete the buffer */
 		    break;
 	    }
 	apply_autocmds(EVENT_VIMLEAVEPRE, NULL, NULL, FALSE, curbuf);

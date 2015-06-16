@@ -2006,7 +2006,7 @@ set_termname(term)
 		    apply_autocmds(EVENT_TERMCHANGED, NULL, NULL, FALSE,
 								      curbuf);
 	    }
-	    if (buf_valid(old_curbuf))
+	    if (vimbuf_valid(old_curbuf))
 		curbuf = old_curbuf;
 	}
 #endif

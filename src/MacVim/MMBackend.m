@@ -772,12 +772,6 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
 
     tabpage_T *tp;
     for (tp = first_tabpage; tp != NULL; tp = tp->tp_next) {
-        // Count the number of windows in the tabpage.
-        //win_T *wp = tp->tp_firstwin;
-        //int wincount;
-        //for (wincount = 0; wp != NULL; wp = wp->w_next, ++wincount);
-        //[data appendBytes:&wincount length:sizeof(int)];
-
         int tabProp = MMTabInfoCount;
         [data appendBytes:&tabProp length:sizeof(int)];
         for (tabProp = MMTabLabel; tabProp < MMTabInfoCount; ++tabProp) {

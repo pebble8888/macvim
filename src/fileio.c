@@ -3357,7 +3357,7 @@ buf_write(buf, fname, sfname, start, end, eap, append, forceit,
 	 * 2. The autocommands abort script processing.
 	 * 3. If one of the "Cmd" autocommands was executed.
 	 */
-	if (!buf_valid(buf))
+	if (!vimbuf_valid(buf))
 	    buf = NULL;
 	if (buf == NULL || (buf->b_ml.ml_mfp == NULL && !empty_memline)
 				       || did_cmd || nofile_err
@@ -6741,7 +6741,7 @@ check_timestamps(focus)
 		n = buf_check_timestamp(buf, focus);
 		if (didit < n)
 		    didit = n;
-		if (n > 0 && !buf_valid(buf))
+		if (n > 0 && !vimbuf_valid(buf))
 		{
 		    /* Autocommands have removed the buffer, start at the
 		     * first one again. */
@@ -6936,7 +6936,7 @@ buf_check_timestamp(buf, focus)
 	    busy = FALSE;
 	    if (n)
 	    {
-		if (!buf_valid(buf))
+		if (!vimbuf_valid(buf))
 		    EMSG(_("E246: FileChangedShell autocommand deleted buffer"));
 # ifdef FEAT_EVAL
 		s = get_vim_var_str(VV_FCS_CHOICE);
@@ -7118,7 +7118,7 @@ buf_check_timestamp(buf, focus)
 
 #ifdef FEAT_AUTOCMD
     /* Trigger FileChangedShell when the file was changed in any way. */
-    if (buf_valid(buf) && retval != 0)
+    if (vimbuf_valid(buf) && retval != 0)
 	(void)apply_autocmds(EVENT_FILECHANGEDSHELLPOST,
 				      buf->b_fname, buf->b_fname, FALSE, buf);
 #endif
@@ -7216,7 +7216,7 @@ buf_reload(buf, orig_mode)
 		if (!aborting())
 #endif
 		    EMSG2(_("E321: Could not reload \"%s\""), buf->b_fname);
-		if (savebuf != NULL && buf_valid(savebuf) && buf == curbuf)
+		if (savebuf != NULL && vimbuf_valid(savebuf) && buf == curbuf)
 		{
 		    /* Put the text back from the save buffer.  First
 		     * delete any lines that readfile() added. */
@@ -7244,7 +7244,7 @@ buf_reload(buf, orig_mode)
 	}
 	vim_free(ea.cmd);
 
-	if (savebuf != NULL && buf_valid(savebuf))
+	if (savebuf != NULL && vimbuf_valid(savebuf))
 	    wipe_buffer(savebuf, FALSE);
 
 #ifdef FEAT_DIFF
@@ -8836,7 +8836,7 @@ ex_doautoall(eap)
 	    aucmd_restbuf(&aco);
 
 	    /* stop if there is some error or buffer was deleted */
-	    if (retval == FAIL || !buf_valid(buf))
+	    if (retval == FAIL || !vimbuf_valid(buf))
 		break;
 	}
     }
@@ -9058,7 +9058,7 @@ win_found:
 	     * valid. */
 	    if (curwin == aco->new_curwin
 		    && curbuf != aco->new_curbuf
-		    && buf_valid(aco->new_curbuf)
+		    && vimbuf_valid(aco->new_curbuf)
 		    && aco->new_curbuf->b_ml.ml_mfp != NULL)
 	    {
 # if defined(FEAT_SYN_HL) || defined(FEAT_SPELL)

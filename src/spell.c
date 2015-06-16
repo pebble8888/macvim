@@ -4315,7 +4315,7 @@ did_set_spelllang(wp)
 #ifdef FEAT_AUTOCMD
 		/* SpellFileMissing autocommands may do anything, including
 		 * destroying the buffer we are using... */
-		if (!buf_valid(wp->w_buffer))
+		if (!vimbuf_valid(wp->w_buffer))
 		{
 		    ret_msg = (char_u *)"E797: SpellFileMissing autocommand deleted buffer";
 		    goto theend;
@@ -15615,7 +15615,7 @@ ex_spelldump(eap)
     set_option_value((char_u*)"spl",  dummy,         spl, OPT_LOCAL);
     vim_free(spl);
 
-    if (!bufempty() || !buf_valid(curbuf))
+    if (!bufempty() || !vimbuf_valid(curbuf))
 	return;
 
     spell_dump_compl(NULL, 0, NULL, eap->forceit ? DUMPFLAG_COUNT : 0);

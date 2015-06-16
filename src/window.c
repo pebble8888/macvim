@@ -6913,7 +6913,7 @@ restore_buffer(save_curbuf)
     unblock_autocmds();
 # endif
     /* Check for valid buffer, just in case. */
-    if (buf_valid(save_curbuf))
+    if (vimbuf_valid(save_curbuf))
     {
 	--curbuf->b_nwindows;
 	curwin->w_buffer = save_curbuf;

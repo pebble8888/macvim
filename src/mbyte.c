@@ -4264,13 +4264,13 @@ my_iconv_open(to, from)
  * Returns the converted string in allocated memory.  NULL for an error.
  * If resultlenp is not NULL, sets it to the result length in bytes.
  */
-    static char_u *
+static char_u *
 iconv_string(vcp, str, slen, unconvlenp, resultlenp)
-    vimconv_T	*vcp;
-    char_u	*str;
-    int		slen;
-    int		*unconvlenp;
-    int		*resultlenp;
+vimconv_T	*vcp;
+char_u	*str;
+int		slen;
+int		*unconvlenp;
+int		*resultlenp;
 {
     const char	*from;
     size_t	fromlen;
@@ -4281,84 +4281,84 @@ iconv_string(vcp, str, slen, unconvlenp, resultlenp)
     char_u	*result = NULL;
     char_u	*p;
     int		l;
-
+    
     from = (char *)str;
     fromlen = slen;
     for (;;)
     {
-	if (len == 0 || ICONV_ERRNO == ICONV_E2BIG)
-	{
-	    /* Allocate enough room for most conversions.  When re-allocating
-	     * increase the buffer size. */
-	    len = len + fromlen * 2 + 40;
-	    p = alloc((unsigned)len);
-	    if (p != NULL && done > 0)
-		mch_memmove(p, result, done);
-	    vim_free(result);
-	    result = p;
-	    if (result == NULL)	/* out of memory */
-		break;
-	}
-
-	to = (char *)result + done;
-	tolen = len - done - 2;
-	/* Avoid a warning for systems with a wrong iconv() prototype by
-	 * casting the second argument to void *. */
-	if (iconv(vcp->vc_fd, (void *)&from, &fromlen, &to, &tolen)
-								!= (size_t)-1)
-	{
-	    /* Finished, append a NUL. */
-	    *to = NUL;
-	    break;
-	}
-
-	/* Check both ICONV_EINVAL and EINVAL, because the dynamically loaded
-	 * iconv library may use one of them. */
-	if (!vcp->vc_fail && unconvlenp != NULL
-		&& (ICONV_ERRNO == ICONV_EINVAL || ICONV_ERRNO == EINVAL))
-	{
-	    /* Handle an incomplete sequence at the end. */
-	    *to = NUL;
-	    *unconvlenp = (int)fromlen;
-	    break;
-	}
-
-	/* Check both ICONV_EILSEQ and EILSEQ, because the dynamically loaded
-	 * iconv library may use one of them. */
-	else if (!vcp->vc_fail
-		&& (ICONV_ERRNO == ICONV_EILSEQ || ICONV_ERRNO == EILSEQ
-		    || ICONV_ERRNO == ICONV_EINVAL || ICONV_ERRNO == EINVAL))
-	{
-	    /* Can't convert: insert a '?' and skip a character.  This assumes
-	     * conversion from 'encoding' to something else.  In other
-	     * situations we don't know what to skip anyway. */
-	    *to++ = '?';
-	    if ((*mb_ptr2cells)((char_u *)from) > 1)
-		*to++ = '?';
-	    if (enc_utf8)
-		l = utfc_ptr2len_len((char_u *)from, (int)fromlen);
-	    else
-	    {
-		l = (*mb_ptr2len)((char_u *)from);
-		if (l > (int)fromlen)
-		    l = (int)fromlen;
-	    }
-	    from += l;
-	    fromlen -= l;
-	}
-	else if (ICONV_ERRNO != ICONV_E2BIG)
-	{
-	    /* conversion failed */
-	    vim_free(result);
-	    result = NULL;
-	    break;
-	}
-	/* Not enough room or skipping illegal sequence. */
-	done = to - (char *)result;
+        if (len == 0 || ICONV_ERRNO == ICONV_E2BIG)
+        {
+            /* Allocate enough room for most conversions.  When re-allocating
+             * increase the buffer size. */
+            len = len + fromlen * 2 + 40;
+            p = alloc((unsigned)len);
+            if (p != NULL && done > 0)
+                mch_memmove(p, result, done);
+            vim_free(result);
+            result = p;
+            if (result == NULL)	/* out of memory */
+                break;
+        }
+        
+        to = (char *)result + done;
+        tolen = len - done - 2;
+        /* Avoid a warning for systems with a wrong iconv() prototype by
+         * casting the second argument to void *. */
+        if (iconv(vcp->vc_fd, (void *)&from, &fromlen, &to, &tolen)
+            != (size_t)-1)
+        {
+            /* Finished, append a NUL. */
+            *to = NUL;
+            break;
+        }
+        
+        /* Check both ICONV_EINVAL and EINVAL, because the dynamically loaded
+         * iconv library may use one of them. */
+        if (!vcp->vc_fail && unconvlenp != NULL
+            && (ICONV_ERRNO == ICONV_EINVAL || ICONV_ERRNO == EINVAL))
+        {
+            /* Handle an incomplete sequence at the end. */
+            *to = NUL;
+            *unconvlenp = (int)fromlen;
+            break;
+        }
+        
+        /* Check both ICONV_EILSEQ and EILSEQ, because the dynamically loaded
+         * iconv library may use one of them. */
+        else if (!vcp->vc_fail
+                 && (ICONV_ERRNO == ICONV_EILSEQ || ICONV_ERRNO == EILSEQ
+                     || ICONV_ERRNO == ICONV_EINVAL || ICONV_ERRNO == EINVAL))
+        {
+            /* Can't convert: insert a '?' and skip a character.  This assumes
+             * conversion from 'encoding' to something else.  In other
+             * situations we don't know what to skip anyway. */
+            *to++ = '?';
+            if ((*mb_ptr2cells)((char_u *)from) > 1)
+                *to++ = '?';
+            if (enc_utf8)
+                l = utfc_ptr2len_len((char_u *)from, (int)fromlen);
+            else
+            {
+                l = (*mb_ptr2len)((char_u *)from);
+                if (l > (int)fromlen)
+                    l = (int)fromlen;
+            }
+            from += l;
+            fromlen -= l;
+        }
+        else if (ICONV_ERRNO != ICONV_E2BIG)
+        {
+            /* conversion failed */
+            vim_free(result);
+            result = NULL;
+            break;
+        }
+        /* Not enough room or skipping illegal sequence. */
+        done = to - (char *)result;
     }
-
+    
     if (resultlenp != NULL && result != NULL)
-	*resultlenp = (int)(to - (char *)result);
+        *resultlenp = (int)(to - (char *)result);
     return result;
 }
 

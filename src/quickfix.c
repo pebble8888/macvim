@@ -3685,7 +3685,7 @@ load_dummy_buffer(fname, dirname_start, resulting_dir)
 
 	/* restore curwin/curbuf and a few other things */
 	aucmd_restbuf(&aco);
-	if (newbuf_to_wipe != NULL && buf_valid(newbuf_to_wipe))
+	if (newbuf_to_wipe != NULL && vimbuf_valid(newbuf_to_wipe))
 	    wipe_buffer(newbuf_to_wipe, FALSE);
     }
 
@@ -3697,7 +3697,7 @@ load_dummy_buffer(fname, dirname_start, resulting_dir)
     mch_dirname(resulting_dir, MAXPATHL);
     restore_start_dir(dirname_start);
 
-    if (!buf_valid(newbuf))
+    if (!vimbuf_valid(newbuf))
 	return NULL;
     if (failed)
     {

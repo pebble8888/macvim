@@ -440,7 +440,7 @@
 		0259C573FE90428111CA0C5A /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0630;
+				LastUpgradeCheck = 0700;
 			};
 			buildConfigurationList = C056398B08A954F8003078D8 /* Build configuration list for PBXProject "PSMTabBarControl" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -591,6 +591,7 @@
 				INSTALL_PATH = "@executable_path/../Frameworks";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.positivespinmedia.PSMTabBarControlFramework;
 				PRODUCT_NAME = PSMTabBarControl;
 				SYMROOT = ../build;
 				ZERO_LINK = NO;
@@ -613,6 +614,7 @@
 				INSTALL_PATH = "@executable_path/../Frameworks";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.positivespinmedia.PSMTabBarControlFramework;
 				PRODUCT_NAME = PSMTabBarControl;
 				SYMROOT = ../build;
 			};
@@ -653,6 +655,7 @@
 		C056398C08A954F8003078D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_TESTABILITY = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				ONLY_ACTIVE_ARCH = YES;

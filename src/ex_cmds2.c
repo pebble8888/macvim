@@ -1405,7 +1405,7 @@ autowrite(buf, forceit)
 
     /* Writing may succeed but the buffer still changed, e.g., when there is a
      * conversion error.  We do want to return FAIL then. */
-    if (buf_valid(buf) && bufIsChanged(buf))
+    if (vimbuf_valid(buf) && bufIsChanged(buf))
 	r = FAIL;
     return r;
 }
@@ -1426,7 +1426,7 @@ autowrite_all()
 	    (void)buf_write_all(buf, FALSE);
 #ifdef FEAT_AUTOCMD
 	    /* an autocommand may have deleted the buffer */
-	    if (!buf_valid(buf))
+	    if (!vimbuf_valid(buf))
 		buf = firstbuf;
 #endif
 	}
@@ -1464,13 +1464,13 @@ check_changed(buf, flags)
 					))
 			++count;
 # ifdef FEAT_AUTOCMD
-	    if (!buf_valid(buf))
+	    if (!vimbuf_valid(buf))
 		/* Autocommand deleted buffer, oops!  It's not changed now. */
 		return FALSE;
 # endif
 	    dialog_changed(buf, count > 1);
 # ifdef FEAT_AUTOCMD
-	    if (!buf_valid(buf))
+	    if (!vimbuf_valid(buf))
 		/* Autocommand deleted buffer, oops!  It's not changed now. */
 		return FALSE;
 # endif
@@ -1653,7 +1653,7 @@ dialog_changed(buf, checkall)
 		    (void)buf_write_all(buf2, FALSE);
 #ifdef FEAT_AUTOCMD
 		/* an autocommand may have deleted the buffer */
-		if (!buf_valid(buf2))
+		if (!vimbuf_valid(buf2))
 		    buf2 = firstbuf;
 #endif
 	    }
@@ -1765,7 +1765,7 @@ check_changed_any(hidden)
 	    * longer exists it's not changed, that's OK. */
 	    if (check_changed(buf, (p_awa ? CCGD_AW : 0)
 				 | CCGD_MULTWIN
-				 | CCGD_ALLBUF) && buf_valid(buf))
+				 | CCGD_ALLBUF) && vimbuf_valid(buf))
 		break;	    /* didn't save - still changes */
 	}
     }
@@ -1811,7 +1811,7 @@ check_changed_any(hidden)
 		goto_tabpage_win(tp, wp);
 # ifdef FEAT_AUTOCMD
 		/* Paranoia: did autocms wipe out the buffer with changes? */
-		if (!buf_valid(buf))
+		if (!vimbuf_valid(buf))
 		{
 		    goto theend;
 		}

@@ -9,6 +9,34 @@
 #ifndef VIM__H
 # define VIM__H
 
+/* pebble8888 */
+#ifndef __APPLE__
+# define select select_declared_wrong
+#endif
+#define tgetstr tgetstr_declared_wrong
+#include "auto/config.h"
+#include "os_unix.h"	/* bring in most header files, more follow below */
+#include "os_unixx.h"	/* bring in header files for os_unix.c */
+
+#ifdef HAVE_TERMCAP_H
+# include <termcap.h>	/* only for term.c */
+#endif
+
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>		/* only used in a few files */
+#endif
+
+#ifdef HAVE_SYS_STATFS_H
+# include <sys/types.h>
+# include <sys/statfs.h>	/* only for memfile.c */
+#endif
+
+#ifdef HAVE_X11
+# include <X11/Intrinsic.h>
+#endif
+/* pebble8888 */
+
+
 /* use fastcall for Borland, when compiling for Win32 (not for DOS16) */
 #if defined(__BORLANDC__) && defined(WIN32) && !defined(DEBUG)
 #if defined(FEAT_PERL) || \

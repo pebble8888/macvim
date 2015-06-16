@@ -276,7 +276,7 @@ open_buffer(read_stdin, eap, flags)
 	 * The autocommands may have changed the current buffer.  Apply the
 	 * modelines to the correct buffer, if it still exists and is loaded.
 	 */
-	if (buf_valid(old_curbuf) && old_curbuf->b_ml.ml_mfp != NULL)
+	if (vimbuf_valid(old_curbuf) && old_curbuf->b_ml.ml_mfp != NULL)
 	{
 	    aco_save_T	aco;
 
@@ -307,7 +307,7 @@ open_buffer(read_stdin, eap, flags)
  * Return TRUE if "buf" points to a valid buffer (in the buffer list).
  */
     int
-buf_valid(buf)
+vimbuf_valid(buf)
     buf_T	*buf;
 {
     buf_T	*bp;
@@ -395,7 +395,7 @@ close_buffer(win, buf, action, abort_if_last)
 	buf->b_closing = TRUE;
 	apply_autocmds(EVENT_BUFWINLEAVE, buf->b_fname, buf->b_fname,
 								  FALSE, buf);
-	if (!buf_valid(buf))
+	if (!vimbuf_valid(buf))
 	{
 	    /* Autocommands deleted the buffer. */
 aucmd_abort:
@@ -414,7 +414,7 @@ aucmd_abort:
 	    buf->b_closing = TRUE;
 	    apply_autocmds(EVENT_BUFHIDDEN, buf->b_fname, buf->b_fname,
 								  FALSE, buf);
-	    if (!buf_valid(buf))
+	    if (!vimbuf_valid(buf))
 		/* Autocommands deleted the buffer. */
 		goto aucmd_abort;
 	    buf->b_closing = FALSE;
@@ -466,7 +466,7 @@ aucmd_abort:
 
 #ifdef FEAT_AUTOCMD
     /* Autocommands may have deleted the buffer. */
-    if (!buf_valid(buf))
+    if (!vimbuf_valid(buf))
 	return;
 # ifdef FEAT_EVAL
     if (aborting())	    /* autocmds may abort script processing */
@@ -580,19 +580,19 @@ buf_freeall(buf, flags)
 
     buf->b_closing = TRUE;
     apply_autocmds(EVENT_BUFUNLOAD, buf->b_fname, buf->b_fname, FALSE, buf);
-    if (!buf_valid(buf))	    /* autocommands may delete the buffer */
+    if (!vimbuf_valid(buf))	    /* autocommands may delete the buffer */
 	return;
     if ((flags & BFA_DEL) && buf->b_p_bl)
     {
 	apply_autocmds(EVENT_BUFDELETE, buf->b_fname, buf->b_fname, FALSE, buf);
-	if (!buf_valid(buf))	    /* autocommands may delete the buffer */
+	if (!vimbuf_valid(buf))	    /* autocommands may delete the buffer */
 	    return;
     }
     if (flags & BFA_WIPE)
     {
 	apply_autocmds(EVENT_BUFWIPEOUT, buf->b_fname, buf->b_fname,
 								  FALSE, buf);
-	if (!buf_valid(buf))	    /* autocommands may delete the buffer */
+	if (!vimbuf_valid(buf))	    /* autocommands may delete the buffer */
 	    return;
     }
     buf->b_closing = FALSE;
@@ -835,7 +835,7 @@ handle_swap_exists(old_curbuf)
 	swap_exists_action = SEA_NONE;	/* don't want it again */
 	swap_exists_did_quit = TRUE;
 	close_buffer(curwin, curbuf, DOBUF_UNLOAD, FALSE);
-	if (!buf_valid(old_curbuf) || old_curbuf == curbuf)
+	if (!vimbuf_valid(old_curbuf) || old_curbuf == curbuf)
 	    old_curbuf = buflist_new(NULL, NULL, 1L, BLN_CURBUF | BLN_LISTED);
 	if (old_curbuf != NULL)
 	{
@@ -1048,7 +1048,7 @@ empty_curbuf(close_others, forceit, action)
      * the old one.  But do_ecmd() may have done that already, check
      * if the buffer still exists.
      */
-    if (buf != curbuf && buf_valid(buf) && buf->b_nwindows == 0)
+    if (buf != curbuf && vimbuf_valid(buf) && buf->b_nwindows == 0)
 	close_buffer(NULL, buf, action, FALSE);
     if (!close_others)
 	need_fileinfo = FALSE;
@@ -1187,7 +1187,7 @@ do_buffer(action, start, dir, count, forceit)
 	    {
 		dialog_changed(buf, FALSE);
 # ifdef FEAT_AUTOCMD
-		if (!buf_valid(buf))
+		if (!vimbuf_valid(buf))
 		    /* Autocommand deleted buffer, oops!  It's not changed
 		     * now. */
 		    return FAIL;
@@ -1241,7 +1241,7 @@ do_buffer(action, start, dir, count, forceit)
 #ifdef FEAT_WINDOWS
 	    close_windows(buf, FALSE);
 #endif
-	    if (buf != curbuf && buf_valid(buf) && buf->b_nwindows <= 0)
+	    if (buf != curbuf && vimbuf_valid(buf) && buf->b_nwindows <= 0)
 		close_buffer(NULL, buf, action, FALSE);
 	    return OK;
 	}
@@ -1259,7 +1259,7 @@ do_buffer(action, start, dir, count, forceit)
 	buf = NULL;	/* selected buffer */
 	bp = NULL;	/* used when no loaded buffer found */
 #ifdef FEAT_AUTOCMD
-	if (au_new_curbuf != NULL && buf_valid(au_new_curbuf))
+	if (au_new_curbuf != NULL && vimbuf_valid(au_new_curbuf))
 	    buf = au_new_curbuf;
 # ifdef FEAT_JUMPLIST
 	else
@@ -1389,7 +1389,7 @@ do_buffer(action, start, dir, count, forceit)
 	{
 	    dialog_changed(curbuf, FALSE);
 # ifdef FEAT_AUTOCMD
-	    if (!buf_valid(buf))
+	    if (!vimbuf_valid(buf))
 		/* Autocommand deleted buffer, oops! */
 		return FAIL;
 # endif
@@ -1457,9 +1457,9 @@ set_curbuf(buf, action)
 #ifdef FEAT_AUTOCMD
     apply_autocmds(EVENT_BUFLEAVE, NULL, NULL, FALSE, curbuf);
 # ifdef FEAT_EVAL
-    if (buf_valid(prevbuf) && !aborting())
+    if (vimbuf_valid(prevbuf) && !aborting())
 # else
-    if (buf_valid(prevbuf))
+    if (vimbuf_valid(prevbuf))
 # endif
 #endif
     {
@@ -1472,9 +1472,9 @@ set_curbuf(buf, action)
 	    close_windows(prevbuf, FALSE);
 #endif
 #if defined(FEAT_AUTOCMD) && defined(FEAT_EVAL)
-	if (buf_valid(prevbuf) && !aborting())
+	if (vimbuf_valid(prevbuf) && !aborting())
 #else
-	if (buf_valid(prevbuf))
+	if (vimbuf_valid(prevbuf))
 #endif
 	{
 #ifdef FEAT_WINDOWS
@@ -1497,7 +1497,7 @@ set_curbuf(buf, action)
     /* An autocommand may have deleted "buf", already entered it (e.g., when
      * it did ":bunload") or aborted the script processing!
      * If curwin->w_buffer is null, enter_buffer() will make it valid again */
-    if ((buf_valid(buf) && buf != curbuf
+    if ((vimbuf_valid(buf) && buf != curbuf
 # ifdef FEAT_EVAL
 	    && !aborting()
 # endif
@@ -1699,7 +1699,7 @@ buflist_new(ffname, sfname, lnum, flags)
 	    if (!(flags & BLN_DUMMY))
 	    {
 		apply_autocmds(EVENT_BUFADD, NULL, NULL, FALSE, buf);
-		if (!buf_valid(buf))
+		if (!vimbuf_valid(buf))
 		    return NULL;
 	    }
 #endif
@@ -1879,12 +1879,12 @@ buflist_new(ffname, sfname, lnum, flags)
 	 * also split the window with re-using the one empty buffer. This may
 	 * result in unexpectedly losing the empty buffer. */
 	apply_autocmds(EVENT_BUFNEW, NULL, NULL, FALSE, buf);
-	if (!buf_valid(buf))
+	if (!vimbuf_valid(buf))
 	    return NULL;
 	if (flags & BLN_LISTED)
 	{
 	    apply_autocmds(EVENT_BUFADD, NULL, NULL, FALSE, buf);
-	    if (!buf_valid(buf))
+	    if (!vimbuf_valid(buf))
 		return NULL;
 	}
 # ifdef FEAT_EVAL
@@ -4708,7 +4708,7 @@ do_arg_all(count, forceit, keep_tabs)
 			(void)autowrite(buf, FALSE);
 #ifdef FEAT_AUTOCMD
 			/* check if autocommands removed the window */
-			if (!win_valid(wp) || !buf_valid(buf))
+			if (!win_valid(wp) || !vimbuf_valid(buf))
 			{
 			    wpnext = firstwin;	/* start all over... */
 			    continue;
@@ -5008,7 +5008,7 @@ ex_buffer_all(eap)
 #endif
 	    set_curbuf(buf, DOBUF_GOTO);
 #ifdef FEAT_AUTOCMD
-	    if (!buf_valid(buf))	/* autocommands deleted the buffer!!! */
+	    if (!vimbuf_valid(buf))	/* autocommands deleted the buffer!!! */
 	    {
 #if defined(HAS_SWAP_EXISTS_ACTION)
 		swap_exists_action = SEA_NONE;

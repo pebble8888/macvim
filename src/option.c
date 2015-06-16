@@ -10595,7 +10595,7 @@ buf_copy_options(buf, flags)
     /*
      * Don't do anything if the buffer is invalid.
      */
-    if (buf == NULL || !buf_valid(buf))
+    if (buf == NULL || !vimbuf_valid(buf))
 	return;
 
     /*
