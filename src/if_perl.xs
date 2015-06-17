@@ -1244,7 +1244,7 @@ DESTROY(vimbuf)
     VIBUF vimbuf;
 
     CODE:
-    if (buf_valid(vimbuf))
+    if (vimbuf_valid(vimbuf))
 	vimbuf->b_perl_private = 0;
 
 void
@@ -1252,7 +1252,7 @@ Name(vimbuf)
     VIBUF vimbuf;
 
     PPCODE:
-    if (!buf_valid(vimbuf))
+    if (!vimbuf_valid(vimbuf))
 	vimbuf = curbuf;
     /* No file name returns an empty string */
     if (vimbuf->b_fname == NULL)
@@ -1265,7 +1265,7 @@ Number(vimbuf)
     VIBUF vimbuf;
 
     PPCODE:
-    if (!buf_valid(vimbuf))
+    if (!vimbuf_valid(vimbuf))
 	vimbuf = curbuf;
     XPUSHs(sv_2mortal(newSViv(vimbuf->b_fnum)));
 
@@ -1274,7 +1274,7 @@ Count(vimbuf)
     VIBUF vimbuf;
 
     PPCODE:
-    if (!buf_valid(vimbuf))
+    if (!vimbuf_valid(vimbuf))
 	vimbuf = curbuf;
     XPUSHs(sv_2mortal(newSViv(vimbuf->b_ml.ml_line_count)));
 
@@ -1287,7 +1287,7 @@ Get(vimbuf, ...)
     int i;
     long lnum;
     PPCODE:
-    if (buf_valid(vimbuf))
+    if (vimbuf_valid(vimbuf))
     {
 	for (i = 1; i < items; i++)
 	{
@@ -1309,7 +1309,7 @@ Set(vimbuf, ...)
     long lnum;
     char *line;
     PPCODE:
-    if (buf_valid(vimbuf))
+    if (vimbuf_valid(vimbuf))
     {
 	if (items < 3)
 	    croak("Usage: VIBUF::Set(vimbuf, lnum, @lines)");
@@ -1345,7 +1345,7 @@ Delete(vimbuf, ...)
     PREINIT:
     long i, lnum = 0, count = 0;
     PPCODE:
-    if (buf_valid(vimbuf))
+    if (vimbuf_valid(vimbuf))
     {
 	if (items == 2)
 	{
@@ -1401,7 +1401,7 @@ Append(vimbuf, ...)
     long	lnum;
     char	*line;
     PPCODE:
-    if (buf_valid(vimbuf))
+    if (vimbuf_valid(vimbuf))
     {
 	if (items < 3)
 	    croak("Usage: VIBUF::Append(vimbuf, lnum, @lines)");
