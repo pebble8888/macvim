@@ -307,9 +307,13 @@ static BOOL isUnsafeMessage(int msgid);
     [self addVimInput:input];
 }
 
+/**
+ * @brief
+ */
 - (void)dropString:(NSString *)string
 {
     ASLogInfo(@"%@", string);
+    // +1 means NIL termination
     int len = [string lengthOfBytesUsingEncoding:NSUTF8StringEncoding] + 1;
     if (len > 0) {
         NSMutableData *data = [NSMutableData data];

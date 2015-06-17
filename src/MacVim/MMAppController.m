@@ -1646,26 +1646,6 @@ fsEventCallback(ConstFSEventStreamRef streamRef,
 - (void)handleXcodeModEvent:(NSAppleEventDescriptor *)event
                  replyEvent:(NSAppleEventDescriptor *)reply
 {
-#if 0
-    // Xcode sends this event to query MacVim which open files have been
-    // modified.
-    ASLogDebug(@"reply:%@", reply);
-    ASLogDebug(@"event:%@", event);
-
-    NSEnumerator *e = [vimControllers objectEnumerator];
-    id vc;
-    while ((vc = [e nextObject])) {
-        DescType type = [reply descriptorType];
-        unsigned len = [[type data] length];
-        NSMutableData *data = [NSMutableData data];
-
-        [data appendBytes:&type length:sizeof(DescType)];
-        [data appendBytes:&len length:sizeof(unsigned)];
-        [data appendBytes:[reply data] length:len];
-
-        [vc sendMessage:XcodeModMsgID data:data];
-    }
-#endif
 }
 #endif
 

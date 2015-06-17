@@ -1066,10 +1066,10 @@ gui_check_pos()
  * Careful: The contents of ScreenLines[] must match what is on the screen,
  * otherwise this goes wrong.  May need to call out_flush() first.
  */
-    void
+void
 gui_update_cursor(force, clear_selection)
-    int		force;		/* when TRUE, update even when not moved */
-    int		clear_selection;/* clear selection under cursor */
+int		force;		/* when TRUE, update even when not moved */
+int		clear_selection;/* clear selection under cursor */
 {
     int		cur_width = 0;
     int		cur_height = 0;
@@ -1080,226 +1080,226 @@ gui_update_cursor(force, clear_selection)
     int		cattr;		/* cursor attributes */
     int		attr;
     attrentry_T *aep = NULL;
-
+    
     /* Don't update the cursor when halfway busy scrolling or the screen size
      * doesn't match 'columns' and 'lines.  ScreenLines[] isn't valid then. */
     if (!can_update_cursor || screen_Columns != gui.num_cols
-					       || screen_Rows != gui.num_rows)
-	return;
-
+        || screen_Rows != gui.num_rows)
+        return;
+    
     gui_check_pos();
     if (!gui.cursor_is_valid || force
-		    || gui.row != gui.cursor_row || gui.col != gui.cursor_col)
+        || gui.row != gui.cursor_row || gui.col != gui.cursor_col)
     {
-	gui_undraw_cursor();
-	if (gui.row < 0)
-	    return;
+        gui_undraw_cursor();
+        if (gui.row < 0)
+            return;
 #ifdef USE_IM_CONTROL
-	if (gui.row != gui.cursor_row || gui.col != gui.cursor_col)
-	    im_set_position(gui.row, gui.col);
+        if (gui.row != gui.cursor_row || gui.col != gui.cursor_col)
+            im_set_position(gui.row, gui.col);
 #endif
-	gui.cursor_row = gui.row;
-	gui.cursor_col = gui.col;
-
-	/* Only write to the screen after ScreenLines[] has been initialized */
-	if (!screen_cleared || ScreenLines == NULL)
-	    return;
-
-	/* Clear the selection if we are about to write over it */
-	if (clear_selection)
-	    clip_may_clear_selection(gui.row, gui.row);
-	/* Check that the cursor is inside the shell (resizing may have made
-	 * it invalid) */
-	if (gui.row >= screen_Rows || gui.col >= screen_Columns)
-	    return;
-
-	gui.cursor_is_valid = TRUE;
-
-	/*
-	 * How the cursor is drawn depends on the current mode.
-	 */
-	idx = get_shape_idx(FALSE);
-	if (State & LANGMAP)
-	    id = shape_table[idx].id_lm;
-	else
-	    id = shape_table[idx].id;
-
-	/* get the colors and attributes for the cursor.  Default is inverted */
-	cfg = INVALCOLOR;
-	cbg = INVALCOLOR;
-	cattr = HL_INVERSE;
-	gui_mch_set_blinking(shape_table[idx].blinkwait,
-			     shape_table[idx].blinkon,
-			     shape_table[idx].blinkoff);
-	if (id > 0)
-	{
-	    cattr = syn_id2colors(id, &cfg, &cbg);
+        gui.cursor_row = gui.row;
+        gui.cursor_col = gui.col;
+        
+        /* Only write to the screen after ScreenLines[] has been initialized */
+        if (!screen_cleared || ScreenLines == NULL)
+            return;
+        
+        /* Clear the selection if we are about to write over it */
+        if (clear_selection)
+            clip_may_clear_selection(gui.row, gui.row);
+        /* Check that the cursor is inside the shell (resizing may have made
+         * it invalid) */
+        if (gui.row >= screen_Rows || gui.col >= screen_Columns)
+            return;
+        
+        gui.cursor_is_valid = TRUE;
+        
+        /*
+         * How the cursor is drawn depends on the current mode.
+         */
+        idx = get_shape_idx(FALSE);
+        if (State & LANGMAP)
+            id = shape_table[idx].id_lm;
+        else
+            id = shape_table[idx].id;
+        
+        /* get the colors and attributes for the cursor.  Default is inverted */
+        cfg = INVALCOLOR;
+        cbg = INVALCOLOR;
+        cattr = HL_INVERSE;
+        gui_mch_set_blinking(shape_table[idx].blinkwait,
+                             shape_table[idx].blinkon,
+                             shape_table[idx].blinkoff);
+        if (id > 0)
+        {
+            cattr = syn_id2colors(id, &cfg, &cbg);
 #if defined(USE_IM_CONTROL) || defined(FEAT_HANGULIN)
-	    {
-		static int iid;
-		guicolor_T fg, bg;
-
-		if (
+            {
+                static int iid;
+                guicolor_T fg, bg;
+                
+                if (
 # if defined(FEAT_GUI_GTK) && !defined(FEAT_HANGULIN)
-			preedit_get_status()
+                    preedit_get_status()
 # else
-			im_get_status()
+                    im_get_status()
 # endif
-			)
-		{
-		    iid = syn_name2id((char_u *)"CursorIM");
-		    if (iid > 0)
-		    {
-			syn_id2colors(iid, &fg, &bg);
-			if (bg != INVALCOLOR)
-			    cbg = bg;
-			if (fg != INVALCOLOR)
-			    cfg = fg;
-		    }
-		}
-	    }
+                    )
+                {
+                    iid = syn_name2id((char_u *)"CursorIM");
+                    if (iid > 0)
+                    {
+                        syn_id2colors(iid, &fg, &bg);
+                        if (bg != INVALCOLOR)
+                            cbg = bg;
+                        if (fg != INVALCOLOR)
+                            cfg = fg;
+                    }
+                }
+            }
 #endif
-	}
-
-	/*
-	 * Get the attributes for the character under the cursor.
-	 * When no cursor color was given, use the character color.
-	 */
-	attr = ScreenAttrs[LineOffset[gui.row] + gui.col];
-	if (attr > HL_ALL)
-	    aep = syn_gui_attr2entry(attr);
-	if (aep != NULL)
-	{
-	    attr = aep->ae_attr;
-	    if (cfg == INVALCOLOR)
-		cfg = ((attr & HL_INVERSE)  ? aep->ae_u.gui.bg_color
-					    : aep->ae_u.gui.fg_color);
-	    if (cbg == INVALCOLOR)
-		cbg = ((attr & HL_INVERSE)  ? aep->ae_u.gui.fg_color
-					    : aep->ae_u.gui.bg_color);
-	}
-	if (cfg == INVALCOLOR)
-	    cfg = (attr & HL_INVERSE) ? gui.back_pixel : gui.norm_pixel;
-	if (cbg == INVALCOLOR)
-	    cbg = (attr & HL_INVERSE) ? gui.norm_pixel : gui.back_pixel;
-
+        }
+        
+        /*
+         * Get the attributes for the character under the cursor.
+         * When no cursor color was given, use the character color.
+         */
+        attr = ScreenAttrs[LineOffset[gui.row] + gui.col];
+        if (attr > HL_ALL)
+            aep = syn_gui_attr2entry(attr);
+        if (aep != NULL)
+        {
+            attr = aep->ae_attr;
+            if (cfg == INVALCOLOR)
+                cfg = ((attr & HL_INVERSE)  ? aep->ae_u.gui.bg_color
+                       : aep->ae_u.gui.fg_color);
+            if (cbg == INVALCOLOR)
+                cbg = ((attr & HL_INVERSE)  ? aep->ae_u.gui.fg_color
+                       : aep->ae_u.gui.bg_color);
+        }
+        if (cfg == INVALCOLOR)
+            cfg = (attr & HL_INVERSE) ? gui.back_pixel : gui.norm_pixel;
+        if (cbg == INVALCOLOR)
+            cbg = (attr & HL_INVERSE) ? gui.norm_pixel : gui.back_pixel;
+        
 #ifdef FEAT_XIM
-	if (aep != NULL)
-	{
-	    xim_bg_color = ((attr & HL_INVERSE) ? aep->ae_u.gui.fg_color
-						: aep->ae_u.gui.bg_color);
-	    xim_fg_color = ((attr & HL_INVERSE) ? aep->ae_u.gui.bg_color
-						: aep->ae_u.gui.fg_color);
-	    if (xim_bg_color == INVALCOLOR)
-		xim_bg_color = (attr & HL_INVERSE) ? gui.norm_pixel
-						   : gui.back_pixel;
-	    if (xim_fg_color == INVALCOLOR)
-		xim_fg_color = (attr & HL_INVERSE) ? gui.back_pixel
-						   : gui.norm_pixel;
-	}
-	else
-	{
-	    xim_bg_color = (attr & HL_INVERSE) ? gui.norm_pixel
+        if (aep != NULL)
+        {
+            xim_bg_color = ((attr & HL_INVERSE) ? aep->ae_u.gui.fg_color
+                            : aep->ae_u.gui.bg_color);
+            xim_fg_color = ((attr & HL_INVERSE) ? aep->ae_u.gui.bg_color
+                            : aep->ae_u.gui.fg_color);
+            if (xim_bg_color == INVALCOLOR)
+                xim_bg_color = (attr & HL_INVERSE) ? gui.norm_pixel
+                : gui.back_pixel;
+            if (xim_fg_color == INVALCOLOR)
+                xim_fg_color = (attr & HL_INVERSE) ? gui.back_pixel
+                : gui.norm_pixel;
+        }
+        else
+        {
+            xim_bg_color = (attr & HL_INVERSE) ? gui.norm_pixel
 					       : gui.back_pixel;
-	    xim_fg_color = (attr & HL_INVERSE) ? gui.back_pixel
+            xim_fg_color = (attr & HL_INVERSE) ? gui.back_pixel
 					       : gui.norm_pixel;
-	}
+        }
 #endif
-
-	attr &= ~HL_INVERSE;
-	if (cattr & HL_INVERSE)
-	{
-	    cc = cbg;
-	    cbg = cfg;
-	    cfg = cc;
-	}
-	cattr &= ~HL_INVERSE;
-
-	/*
-	 * When we don't have window focus, draw a hollow cursor.
-	 */
-	if (!gui.in_focus)
-	{
-	    gui_mch_draw_hollow_cursor(cbg);
-	    return;
-	}
-
-	old_hl_mask = gui.highlight_mask;
-	if (shape_table[idx].shape == SHAPE_BLOCK
+        
+        attr &= ~HL_INVERSE;
+        if (cattr & HL_INVERSE)
+        {
+            cc = cbg;
+            cbg = cfg;
+            cfg = cc;
+        }
+        cattr &= ~HL_INVERSE;
+        
+        /*
+         * When we don't have window focus, draw a hollow cursor.
+         */
+        if (!gui.in_focus)
+        {
+            gui_mch_draw_hollow_cursor(cbg);
+            return;
+        }
+        
+        old_hl_mask = gui.highlight_mask;
+        if (shape_table[idx].shape == SHAPE_BLOCK
 #ifdef FEAT_HANGULIN
-		|| composing_hangul
+            || composing_hangul
 #endif
-	   )
-	{
-	    /*
-	     * Draw the text character with the cursor colors.	Use the
-	     * character attributes plus the cursor attributes.
-	     */
-	    gui.highlight_mask = (cattr | attr);
+            )
+        {
+            /*
+             * Draw the text character with the cursor colors.	Use the
+             * character attributes plus the cursor attributes.
+             */
+            gui.highlight_mask = (cattr | attr);
 #ifdef FEAT_HANGULIN
-	    if (composing_hangul)
-		(void)gui_outstr_nowrap(composing_hangul_buffer, 2,
-			GUI_MON_IS_CURSOR | GUI_MON_NOCLEAR, cfg, cbg, 0);
-	    else
+            if (composing_hangul)
+                (void)gui_outstr_nowrap(composing_hangul_buffer, 2,
+                                        GUI_MON_IS_CURSOR | GUI_MON_NOCLEAR, cfg, cbg, 0);
+            else
 #endif
-		(void)gui_screenchar(LineOffset[gui.row] + gui.col,
-			GUI_MON_IS_CURSOR | GUI_MON_NOCLEAR, cfg, cbg, 0);
-	}
-	else
-	{
+                (void)gui_screenchar(LineOffset[gui.row] + gui.col,
+                                     GUI_MON_IS_CURSOR | GUI_MON_NOCLEAR, cfg, cbg, 0);
+        }
+        else
+        {
 #if defined(FEAT_MBYTE) && defined(FEAT_RIGHTLEFT)
-	    int	    col_off = FALSE;
+            int	    col_off = FALSE;
 #endif
-	    /*
-	     * First draw the partial cursor, then overwrite with the text
-	     * character, using a transparent background.
-	     */
-	    if (shape_table[idx].shape == SHAPE_VER)
-	    {
-		cur_height = gui.char_height;
-		cur_width = (gui.char_width * shape_table[idx].percentage
-								  + 99) / 100;
-	    }
-	    else
-	    {
-		cur_height = (gui.char_height * shape_table[idx].percentage
-								  + 99) / 100;
-		cur_width = gui.char_width;
-	    }
+            /*
+             * First draw the partial cursor, then overwrite with the text
+             * character, using a transparent background.
+             */
+            if (shape_table[idx].shape == SHAPE_VER)
+            {
+                cur_height = gui.char_height;
+                cur_width = (gui.char_width * shape_table[idx].percentage
+                             + 99) / 100;
+            }
+            else
+            {
+                cur_height = (gui.char_height * shape_table[idx].percentage
+                              + 99) / 100;
+                cur_width = gui.char_width;
+            }
 #ifdef FEAT_MBYTE
-	    if (has_mbyte && (*mb_off2cells)(LineOffset[gui.row] + gui.col,
-				    LineOffset[gui.row] + screen_Columns) > 1)
-	    {
-		/* Double wide character. */
-		if (shape_table[idx].shape != SHAPE_VER)
-		    cur_width += gui.char_width;
+            if (has_mbyte && (*mb_off2cells)(LineOffset[gui.row] + gui.col,
+                                             LineOffset[gui.row] + screen_Columns) > 1)
+            {
+                /* Double wide character. */
+                if (shape_table[idx].shape != SHAPE_VER)
+                    cur_width += gui.char_width;
 # ifdef FEAT_RIGHTLEFT
-		if (CURSOR_BAR_RIGHT)
-		{
-		    /* gui.col points to the left halve of the character but
-		     * the vertical line needs to be on the right halve.
-		     * A double-wide horizontal line is also drawn from the
-		     * right halve in gui_mch_draw_part_cursor(). */
-		    col_off = TRUE;
-		    ++gui.col;
-		}
+                if (CURSOR_BAR_RIGHT)
+                {
+                    /* gui.col points to the left halve of the character but
+                     * the vertical line needs to be on the right halve.
+                     * A double-wide horizontal line is also drawn from the
+                     * right halve in gui_mch_draw_part_cursor(). */
+                    col_off = TRUE;
+                    ++gui.col;
+                }
 # endif
-	    }
+            }
 #endif
-	    gui_mch_draw_part_cursor(cur_width, cur_height, cbg);
+            gui_mch_draw_part_cursor(cur_width, cur_height, cbg);
 #if defined(FEAT_MBYTE) && defined(FEAT_RIGHTLEFT)
-	    if (col_off)
-		--gui.col;
+            if (col_off)
+                --gui.col;
 #endif
-
+            
 #ifndef FEAT_GUI_MSWIN	    /* doesn't seem to work for MSWindows */
-	    gui.highlight_mask = ScreenAttrs[LineOffset[gui.row] + gui.col];
-	    (void)gui_screenchar(LineOffset[gui.row] + gui.col,
-		    GUI_MON_TRS_CURSOR | GUI_MON_NOCLEAR,
-		    (guicolor_T)0, (guicolor_T)0, 0);
+            gui.highlight_mask = ScreenAttrs[LineOffset[gui.row] + gui.col];
+            (void)gui_screenchar(LineOffset[gui.row] + gui.col,
+                                 GUI_MON_TRS_CURSOR | GUI_MON_NOCLEAR,
+                                 (guicolor_T)0, (guicolor_T)0, 0);
 #endif
-	}
-	gui.highlight_mask = old_hl_mask;
+        }
+        gui.highlight_mask = old_hl_mask;
     }
 }
 

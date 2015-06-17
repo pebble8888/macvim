@@ -67,9 +67,9 @@ extern NSTimeInterval MMBalloonEvalInternalDelay;
 
 + (MMBackend *)sharedInstance;
 
-- (void)setBackgroundColor:(int)color;
-- (void)setForegroundColor:(int)color;
-- (void)setSpecialColor:(int)color;
+- (void)setBackgroundColor:(long)color;
+- (void)setForegroundColor:(long)color;
+- (void)setSpecialColor:(long)color;
 - (void)setDefaultColorsBackground:(int)bg foreground:(int)fg;
 - (NSConnection *)connection;
 - (NSDictionary *)actionDict;

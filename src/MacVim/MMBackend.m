@@ -163,60 +163,6 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
 @end
 
 
-
-
-@interface MMBackend (Private)
-- (void)clearDrawData;
-- (void)didChangeWholeLine;
-- (void)waitForDialogReturn;
-- (void)insertVimStateMessage;
-- (void)processInputQueue;
-- (void)handleInputEvent:(int)msgid data:(NSData *)data;
-- (void)doKeyDown:(NSString *)key
-          keyCode:(unsigned)code
-        modifiers:(int)mods;
-- (BOOL)handleSpecialKey:(NSString *)key
-                 keyCode:(unsigned)code
-               modifiers:(int)mods;
-- (BOOL)handleMacMetaKey:(int)ikey modifiers:(int)mods;
-- (void)queueMessage:(int)msgid data:(NSData *)data;
-- (void)connectionDidDie:(NSNotification *)notification;
-- (void)blinkTimerFired:(NSTimer *)timer;
-- (void)focusChange:(BOOL)on;
-- (void)handleToggleToolbar;
-- (void)handleScrollbarEvent:(NSData *)data;
-- (void)handleSetFont:(NSData *)data;
-- (void)handleDropFiles:(NSData *)data;
-- (void)handleDropString:(NSData *)data;
-- (void)startOdbEditWithArguments:(NSDictionary *)args;
-- (void)handleXcodeMod:(NSData *)data;
-- (void)handleOpenWithArguments:(NSDictionary *)args;
-- (int)checkForModifiedBuffers;
-- (void)addInput:(NSString *)input;
-- (void)redrawScreen;
-- (void)handleFindReplace:(NSDictionary *)args;
-- (void)handleMarkedText:(NSData *)data;
-#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_6)
-- (void)handleGesture:(NSData *)data;
-#endif
-#ifdef FEAT_BEVAL
-- (void)bevalCallback:(id)sender;
-#endif
-@end
-
-
-
-@interface MMBackend (ClientServer)
-- (NSString *)connectionNameFromServerName:(NSString *)name;
-- (NSConnection *)connectionForServerName:(NSString *)name;
-- (NSConnection *)connectionForServerPort:(int)port;
-- (void)serverConnectionDidDie:(NSNotification *)notification;
-- (void)addClient:(NSDistantObject *)client;
-- (NSString *)alternateServerNameForName:(NSString *)name;
-@end
-
-
-
 @implementation MMBackend
 
 + (MMBackend *)sharedInstance
@@ -285,17 +231,17 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
     [super dealloc];
 }
 
-- (void)setBackgroundColor:(int)color
+- (void)setBackgroundColor:(long)color
 {
     backgroundColor = MM_COLOR_WITH_TRANSP(color,p_transp);
 }
 
-- (void)setForegroundColor:(int)color
+- (void)setForegroundColor:(long)color
 {
     foregroundColor = MM_COLOR(color);
 }
 
-- (void)setSpecialColor:(int)color
+- (void)setSpecialColor:(long)color
 {
     specialColor = MM_COLOR(color);
 }
@@ -1259,7 +1205,7 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
         // queue, else the input queue may fill up as a result of Vim not being
         // able to keep up with the speed at which new messages are received.
         // TODO: Remove all previous instances (there could be many)?
-        int i, count = [inputQueue count];
+        int i, count = (int)[inputQueue count];
         for (i = 1; i < count; i += 2) {
             if ([[inputQueue objectAtIndex:i-1] intValue] == msgid) {
                 ASLogDebug(@"Input queue filling up, remove message: %s",
@@ -1717,11 +1663,11 @@ static void netbeansReadCallback(CFSocketRef s,
             [NSDictionary dictionaryWithObject:filenames forKey:@"filenames"]];
 }
 
-@end // MMBackend
+//@end // MMBackend
 
 
 
-@implementation MMBackend (Private)
+//@implementation MMBackend (Private)
 
 - (void)clearDrawData
 {
@@ -1744,13 +1690,13 @@ static void netbeansReadCallback(CFSocketRef s,
     ++numWholeLineChanges;
     if (numWholeLineChanges == gui.num_rows) {
         // Remember the offset to prune up to.
-        offsetForDrawDataPrune = [drawData length];
+        offsetForDrawDataPrune = (unsigned int)[drawData length];
     } else if (numWholeLineChanges == 2*gui.num_rows) {
         // Delete all the unnecessary draw commands.
         NSMutableData *d = [[NSMutableData alloc]
                     initWithBytes:[drawData bytes] + offsetForDrawDataPrune
                            length:[drawData length] - offsetForDrawDataPrune];
-        offsetForDrawDataPrune = [d length];
+        offsetForDrawDataPrune = (unsigned int)[d length];
         numWholeLineChanges -= gui.num_rows;
         [drawData release];
         drawData = d;
@@ -1775,7 +1721,7 @@ static void netbeansReadCallback(CFSocketRef s,
     // on the input queue are dropped.  The reason why we single out resize
     // messages is because the user may have resized the window while a sheet
     // was open.
-    int i, count = [inputQueue count];
+    int i, count = (int)[inputQueue count];
     if (count > 0) {
         id textDimData = nil;
         if (count%2 == 0) {
@@ -1839,7 +1785,7 @@ static void netbeansReadCallback(CFSocketRef s,
     // queue before starting to process input events (otherwise we could get
     // stuck in an endless loop).
     NSArray *q = [inputQueue copy];
-    unsigned i, count = [q count];
+    unsigned i, count = (int)[q count];
 
     [inputQueue removeAllObjects];
 
@@ -2062,7 +2008,6 @@ static void netbeansReadCallback(CFSocketRef s,
         const void *bytes = [data bytes];
         int rows = *((int*)bytes);  bytes += sizeof(int);
         int cols = *((int*)bytes);  bytes += sizeof(int);
-        //int zoom = *((int*)bytes);  bytes += sizeof(int);
 
         // NOTE: The frontend sends zoom messages here causing us to
         // immediately resize the shell and mirror the message back to the
@@ -2102,7 +2047,7 @@ static void netbeansReadCallback(CFSocketRef s,
     if (!key) return;
 
     char_u *str = (char_u*)[key UTF8String];
-    int i, len = [key lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+    int i, len = (int)[key lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
 
     if ([self handleSpecialKey:key keyCode:code modifiers:mods])
         return;
@@ -2351,7 +2296,7 @@ static void netbeansReadCallback(CFSocketRef s,
 
     STRCPY(go, p_go);
     p = vim_strchr(go, GO_TOOLBAR);
-    len = STRLEN(go);
+    len = (int)STRLEN(go);
 
     if (p != NULL) {
         char_u *end = go + len;
@@ -2432,6 +2377,9 @@ static void netbeansReadCallback(CFSocketRef s,
     }
 }
 
+/**
+ * @brief フォント名
+ */
 - (void)handleSetFont:(NSData *)data
 {
     if (!data) return;
@@ -2507,7 +2455,7 @@ static void netbeansReadCallback(CFSocketRef s,
         // should be added to the command line, instead of opening the
         // files in tabs (unless forceOpen is set).  This is taken care of by
         // gui_handle_drop().
-        int n = [filenames count];
+        int n = (int)[filenames count];
         char_u **fnames = (char_u **)alloc(n * sizeof(char_u *));
         if (fnames) {
             int i = 0;
@@ -2526,6 +2474,10 @@ static void netbeansReadCallback(CFSocketRef s,
     }
 }
 
+/**
+ * @brief 
+ * @note  要注意
+ */
 - (void)handleDropString:(NSData *)data
 {
     if (!data) return;
@@ -2538,21 +2490,25 @@ static void netbeansReadCallback(CFSocketRef s,
 
     // Replace unrecognized end-of-line sequences with \x0a (line feed).
     NSRange range = { 0, [string length] };
-    unsigned n = [string replaceOccurrencesOfString:@"\x0d\x0a"
+    // number of replaced pair
+    unsigned n = (unsigned)[string replaceOccurrencesOfString:@"\x0d\x0a"
                                          withString:@"\x0a" options:0
                                               range:range];
+    /* pebble8888 no need */
+    /*
     if (0 == n) {
-        n = [string replaceOccurrencesOfString:@"\x0d" withString:@"\x0a"
+        n = (unsigned)[string replaceOccurrencesOfString:@"\x0d" withString:@"\x0a"
                                        options:0 range:range];
     }
+     */
 
-    len = [string lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+    int bytelen = (unsigned)[string lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
     char_u *s = (char_u*)[string UTF8String];
 #ifdef FEAT_MBYTE
     if (input_conv.vc_type != CONV_NONE)
-        s = string_convert(&input_conv, s, &len);
+        s = string_convert(&input_conv, s, &bytelen);
 #endif
-    dnd_yank_drag_data(s, len);
+    dnd_yank_drag_data(s, bytelen);
 #ifdef FEAT_MBYTE
     if (input_conv.vc_type != CONV_NONE)
         vim_free(s);
@@ -2613,18 +2569,6 @@ static void netbeansReadCallback(CFSocketRef s,
 
 - (void)handleXcodeMod:(NSData *)data
 {
-#if 0
-    const void *bytes = [data bytes];
-    DescType type = *((DescType*)bytes);  bytes += sizeof(DescType);
-    unsigned len = *((unsigned*)bytes);  bytes += sizeof(unsigned);
-    if (0 == len)
-        return;
-
-    NSAppleEventDescriptor *replyEvent = [NSAppleEventDescriptor
-            descriptorWithDescriptorType:type
-                                   bytes:bytes
-                                  length:len];
-#endif
 }
 
 - (void)handleOpenWithArguments:(NSDictionary *)args
@@ -3030,13 +2974,9 @@ static void netbeansReadCallback(CFSocketRef s,
 }
 #endif
 
-@end // MMBackend (Private)
+//@end // MMBackend (Private)
 
-
-
-
-@implementation MMBackend (ClientServer)
-
+#pragma mark - ClientServer
 - (NSString *)connectionNameFromServerName:(NSString *)name
 {
     NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
@@ -3387,7 +3327,7 @@ static id evalExprCocoa(NSString * expr, NSString ** errstr)
         s = CONVERT_TO_UTF8(s);
 #endif
         string = [NSString stringWithUTF8String:(char*)s];
-        if (!string) {
+        if (string == nil) {
             // HACK! Apparently 's' is not a valid utf-8 string, maybe it is
             // latin-1?
             string = [NSString stringWithCString:(char*)s
