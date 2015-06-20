@@ -20,8 +20,10 @@ extern NSTimeInterval MMBalloonEvalInternalDelay;
 #endif
 
 
-@interface MMBackend : NSObject <MMBackendProtocol, MMVimServerProtocol,
-        MMVimClientProtocol> {
+@interface MMBackend : NSObject
+<MMBackendProtocol,
+ MMVimServerProtocol,
+ MMVimClientProtocol> {
     NSMutableArray      *outputQueue;
     NSMutableArray      *inputQueue;
     NSMutableData       *drawData;
@@ -63,6 +65,7 @@ extern NSTimeInterval MMBalloonEvalInternalDelay;
 #ifdef FEAT_BEVAL
     NSString            *lastToolTip;
 #endif
+     FILE* fp;
 }
 
 + (MMBackend *)sharedInstance;

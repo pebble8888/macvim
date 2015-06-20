@@ -140,7 +140,7 @@
 		1D1474950C56703C0038FA2B /* MacVim.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MacVim.h; sourceTree = "<group>"; };
 		1D1474960C56703C0038FA2B /* MacVim.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = MacVim.m; sourceTree = "<group>"; };
 		1D14749D0C5673AE0038FA2B /* MMAppController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MMAppController.h; sourceTree = "<group>"; };
-		1D14749E0C5673AE0038FA2B /* MMAppController.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = MMAppController.m; sourceTree = "<group>"; };
+		1D14749E0C5673AE0038FA2B /* MMAppController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MMAppController.m; sourceTree = "<group>"; };
 		1D1474A70C5677450038FA2B /* MMTextStorage.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MMTextStorage.h; sourceTree = "<group>"; };
 		1D1474A80C5677450038FA2B /* MMTextStorage.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = MMTextStorage.m; sourceTree = "<group>"; };
 		1D1474AD0C5678370038FA2B /* MMTextView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MMTextView.h; sourceTree = "<group>"; };

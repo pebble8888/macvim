@@ -772,12 +772,14 @@
 		A2ACB84F1B3056B8004E4918 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/develop/macvim/src/MacVim/build/Debug,
 					/develop/macvim/src/MacVim/build/Release,
 					/develop/macvim/src/MacVim,
 				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -785,12 +787,14 @@
 		A2ACB8501B3056B8004E4918 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/develop/macvim/src/MacVim/build/Debug,
 					/develop/macvim/src/MacVim/build/Release,
 					/develop/macvim/src/MacVim,
 				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -814,6 +818,7 @@
 				A2ACB8501B3056B8004E4918 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

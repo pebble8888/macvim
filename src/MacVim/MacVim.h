@@ -30,6 +30,8 @@
 //
 // This is the protocol MMBackend implements.
 //
+// MacVimからvimへのメソッド呼び出し
+//
 // Only processInput:data: is allowed to cause state changes in Vim; all other
 // messages should only read the Vim state.  (Note that setDialogReturn: is an
 // exception to this rule; there really is no other way to deal with dialogs
@@ -54,6 +56,8 @@
 //
 // This is the protocol MMAppController implements.
 //
+// vimからMacVimのメソッド呼び出し
+//
 // It handles connections between MacVim and Vim and communication from Vim to
 // MacVim.
 //
@@ -76,6 +80,8 @@
 //
 // The Vim client protocol (implemented by MMBackend).
 //
+// MacVimからvimへのメソッド呼び出し
+//
 // The client needs to keep track of server replies.  Take a look at MMBackend
 // if you want to implement this protocol in another program.
 //
@@ -88,15 +94,15 @@
 //
 // The Vim server protocol (implemented by MMBackend).
 //
+// MacVimからvimへのメソッド呼び出し
+//
 // Note that addInput:client: is not asynchronous, because otherwise Vim might
 // quit before the message has been passed (e.g. if --remote was used on the
 // command line).
 //
 @protocol MMVimServerProtocol
-- (void)addInput:(in bycopy NSString *)input
-                 client:(in byref id <MMVimClientProtocol>)client;
-- (NSString *)evaluateExpression:(in bycopy NSString *)expr
-                 client:(in byref id <MMVimClientProtocol>)client;
+- (void)addInput:(in bycopy NSString *)input client:(in byref id <MMVimClientProtocol>)client;
+- (NSString *)evaluateExpression:(in bycopy NSString *)expr client:(in byref id <MMVimClientProtocol>)client;
 @end
 
 
@@ -111,7 +117,7 @@ extern char *MessageStrings[];
 
 enum {
     OpenWindowMsgID = 1,    // NOTE: FIRST IN ENUM MUST BE 1
-    KeyDownMsgID,
+    KeyDownMsgID = 2,
     BatchDrawMsgID,
     SelectTabMsgID,
     CloseTabMsgID,
@@ -129,7 +135,7 @@ enum {
     ScrollWheelMsgID,
     MouseDownMsgID,
     MouseUpMsgID,
-    MouseDraggedMsgID,
+    MouseDraggedMsgID = 20,
     FlushQueueMsgID,
     AddMenuMsgID,
     AddMenuItemMsgID,
@@ -149,12 +155,12 @@ enum {
     VimShouldCloseMsgID,
     SetDefaultColorsMsgID,
     ExecuteActionMsgID,
-    DropFilesMsgID,
-    DropStringMsgID,
-    ShowPopupMenuMsgID,
-    GotFocusMsgID,
-    LostFocusMsgID,
-    MouseMovedMsgID,
+    DropFilesMsgID = 40,
+    DropStringMsgID = 41,
+    ShowPopupMenuMsgID = 42,
+    GotFocusMsgID = 43,
+    LostFocusMsgID = 44,
+    MouseMovedMsgID = 45,
     SetMouseShapeMsgID,
     AdjustLinespaceMsgID,
     ActivateMsgID,
@@ -169,7 +175,7 @@ enum {
     EnableAntialiasMsgID,
     DisableAntialiasMsgID,
     SetVimStateMsgID,
-    SetDocumentFilenameMsgID,
+    SetDocumentFilenameMsgID = 60,
     OpenWithArgumentsMsgID,
     CloseWindowMsgID,
     SetFullScreenColorMsgID,
@@ -179,17 +185,17 @@ enum {
     DeactivateKeyScriptMsgID,
     EnableImControlMsgID,
     DisableImControlMsgID,
-    ActivatedImMsgID,
+    ActivatedImMsgID = 70,
     DeactivatedImMsgID,
     BrowseForFileMsgID,
     ShowDialogMsgID,
     NetBeansMsgID,
-    SetMarkedTextMsgID,
+    SetMarkedTextMsgID = 75,
     ZoomMsgID,
     SetWindowPositionMsgID,
     DeleteSignMsgID,
     SetTooltipMsgID,
-    SetTooltipDelayMsgID,
+    SetTooltipDelayMsgID = 80,
     GestureMsgID,
     AddToMRUMsgID,
     BackingPropertiesChangedMsgID,

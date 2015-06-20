@@ -42,131 +42,120 @@ static TECObjectRef gUTF16ToUTF8Converter;
 /*
  * A Mac version of string_convert_ext() for special cases.
  */
-    char_u *
+char_u *
 mac_string_convert(ptr, len, lenp, fail_on_error, from_enc, to_enc, unconvlenp)
-    char_u		*ptr;
-    int			len;
-    int			*lenp;
-    int			fail_on_error;
-    int			from_enc;
-    int			to_enc;
-    int			*unconvlenp;
+char_u		*ptr;
+int			len;
+int			*lenp;
+int			fail_on_error;
+int			from_enc;
+int			to_enc;
+int			*unconvlenp;
 {
     char_u		*retval, *d;
     CFStringRef		cfstr;
     int			buflen, in, out, l, i;
     CFStringEncoding	from;
     CFStringEncoding	to;
-
+    
     switch (from_enc)
     {
-	case 'l':   from = kCFStringEncodingISOLatin1; break;
-	case 'm':   from = kCFStringEncodingMacRoman; break;
-	case 'u':   from = kCFStringEncodingUTF8; break;
-	default:    return NULL;
+        case 'l':   from = kCFStringEncodingISOLatin1; break;
+        case 'm':   from = kCFStringEncodingMacRoman; break;
+        case 'u':   from = kCFStringEncodingUTF8; break;
+        default:    return NULL;
     }
     switch (to_enc)
     {
-	case 'l':   to = kCFStringEncodingISOLatin1; break;
-	case 'm':   to = kCFStringEncodingMacRoman; break;
-	case 'u':   to = kCFStringEncodingUTF8; break;
-	default:    return NULL;
+        case 'l':   to = kCFStringEncodingISOLatin1; break;
+        case 'm':   to = kCFStringEncodingMacRoman; break;
+        case 'u':   to = kCFStringEncodingUTF8; break;
+        default:    return NULL;
     }
-
-    if (unconvlenp != NULL)
-	*unconvlenp = 0;
+    
+    if (unconvlenp != NULL){
+        *unconvlenp = 0;
+    }
     cfstr = CFStringCreateWithBytes(NULL, ptr, len, from, 0);
-
-    if (cfstr == NULL)
-	fprintf(stderr, "Encoding failed\n");
+    
+    if (cfstr == NULL){
+        fprintf(stderr, "Encoding failed\n");
+    }
     /* When conversion failed, try excluding bytes from the end, helps when
      * there is an incomplete byte sequence.  Only do up to 6 bytes to avoid
      * looping a long time when there really is something unconvertible. */
     while (cfstr == NULL && unconvlenp != NULL && len > 1 && *unconvlenp < 6)
     {
-	--len;
-	++*unconvlenp;
-	cfstr = CFStringCreateWithBytes(NULL, ptr, len, from, 0);
+        --len;
+        ++*unconvlenp;
+        cfstr = CFStringCreateWithBytes(NULL, ptr, len, from, 0);
     }
     if (cfstr == NULL)
-	return NULL;
-
-    if (to == kCFStringEncodingUTF8)
-	buflen = len * 6 + 1;
-    else
-	buflen = len + 1;
+        return NULL;
+    
+    if (to == kCFStringEncodingUTF8){
+        buflen = len * 6 + 1;
+    }
+    else{
+        buflen = len + 1;
+    }
     retval = alloc(buflen);
     if (retval == NULL)
     {
-	CFRelease(cfstr);
-	return NULL;
+        CFRelease(cfstr);
+        return NULL;
     }
-
-#if 0
-    CFRange convertRange = CFRangeMake(0, CFStringGetLength(cfstr));
-    /*  Determine output buffer size */
-    CFStringGetBytes(cfstr, convertRange, to, NULL, FALSE, NULL, 0, (CFIndex *)&buflen);
-    retval = (buflen > 0) ? alloc(buflen) : NULL;
-    if (retval == NULL) {
-	CFRelease(cfstr);
-	return NULL;
-    }
-
-    if (lenp)
-	*lenp = buflen / sizeof(char_u);
-
-    if (!CFStringGetBytes(cfstr, convertRange, to, NULL, FALSE, retval, buflen, NULL))
-#endif
+    
     if (!CFStringGetCString(cfstr, (char *)retval, buflen, to))
     {
-	CFRelease(cfstr);
-	if (fail_on_error)
-	{
-	    vim_free(retval);
-	    return NULL;
-	}
-
-	fprintf(stderr, "Trying char-by-char conversion...\n");
-	/* conversion failed for the whole string, but maybe it will work
-	 * for each character */
-	for (d = retval, in = 0, out = 0; in < len && out < buflen - 1;)
-	{
-	    if (from == kCFStringEncodingUTF8)
-		l = utf_ptr2len(ptr + in);
-	    else
-		l = 1;
-	    cfstr = CFStringCreateWithBytes(NULL, ptr + in, l, from, 0);
-	    if (cfstr == NULL)
-	    {
-		*d++ = '?';
-		out++;
-	    }
-	    else
-	    {
-		if (!CFStringGetCString(cfstr, (char *)d, buflen - out, to))
-		{
-		    *d++ = '?';
-		    out++;
-		}
-		else
-		{
-		    i = STRLEN(d);
-		    d += i;
-		    out += i;
-		}
-		CFRelease(cfstr);
-	    }
-	    in += l;
-	}
-	*d = NUL;
-	if (lenp != NULL)
-	    *lenp = out;
-	return retval;
+        CFRelease(cfstr);
+        if (fail_on_error)
+        {
+            vim_free(retval);
+            return NULL;
+        }
+        
+        fprintf(stderr, "Trying char-by-char conversion...\n");
+        /* conversion failed for the whole string, but maybe it will work
+         * for each character */
+        for (d = retval, in = 0, out = 0; in < len && out < buflen - 1;)
+        {
+            if (from == kCFStringEncodingUTF8)
+                l = utf_ptr2len(ptr + in);
+            else
+                l = 1;
+            cfstr = CFStringCreateWithBytes(NULL, ptr + in, l, from, 0);
+            if (cfstr == NULL)
+            {
+                *d++ = '?';
+                out++;
+            }
+            else
+            {
+                if (!CFStringGetCString(cfstr, (char *)d, buflen - out, to))
+                {
+                    *d++ = '?';
+                    out++;
+                }
+                else
+                {
+                    i = STRLEN(d);
+                    d += i;
+                    out += i;
+                }
+                CFRelease(cfstr);
+            }
+            in += l;
+        }
+        *d = NUL;
+        if (lenp != NULL)
+            *lenp = out;
+        return retval;
     }
     CFRelease(cfstr);
-    if (lenp != NULL)
-	*lenp = STRLEN(retval);
-
+    if (lenp != NULL){
+        *lenp = STRLEN(retval);
+    }
     return retval;
 }
 

@@ -175,6 +175,8 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
 {
     self = [super init];
     if (!self) return nil;
+    
+    //fp = fopen("/tmp/mmbackend.log", "a");
 
     outputQueue = [[NSMutableArray alloc] init];
     inputQueue = [[NSMutableArray alloc] init];
@@ -322,34 +324,6 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
         }
 
         NSBundle *mainBundle = [NSBundle mainBundle];
-#if 0
-        OSStatus status;
-        FSRef ref;
-
-        // Launch MacVim using Launch Services (NSWorkspace would be nicer, but
-        // the API to pass Apple Event parameters is broken on 10.4).
-        NSString *path = [mainBundle bundlePath];
-        status = FSPathMakeRef((const UInt8 *)[path UTF8String], &ref, NULL);
-        if (noErr == status) {
-            // Pass parameter to the 'Open' Apple Event that tells MacVim not
-            // to open an untitled window.
-            NSAppleEventDescriptor *desc =
-                    [NSAppleEventDescriptor recordDescriptor];
-            [desc setParamDescriptor:
-                    [NSAppleEventDescriptor descriptorWithBoolean:NO]
-                          forKeyword:keyMMUntitledWindow];
-
-            LSLaunchFSRefSpec spec = { &ref, 0, NULL, [desc aeDesc],
-                    kLSLaunchDefaults, NULL };
-            status = LSOpenFromRefSpec(&spec, NULL);
-        }
-
-        if (noErr != status) {
-        ASLogCrit(@"Failed to launch MacVim (path=%@).%@",
-                  path, MMSymlinkWarningString);
-            return NO;
-        }
-#else
         // Launch MacVim using NSTask.  For some reason the above code using
         // Launch Services sometimes fails on LSOpenFromRefSpec() (when it
         // fails, the dock icon starts bouncing and never stops).  It seems
@@ -371,7 +345,6 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
         }
 
         [NSTask launchedTaskWithLaunchPath:path arguments:args];
-#endif
 
         // HACK!  Poll the mach bootstrap server until it returns a valid
         // connection to detect that MacVim has finished launching.  Also set a
@@ -607,6 +580,7 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
         @try {
             ASLogDebug(@"Flushing queue: %@",
                        debugStringForMessageQueue(outputQueue));
+            // MacVimのメソッド呼び出し
             [appProxy processInput:outputQueue forIdentifier:identifier];
         }
         @catch (NSException *ex) {
@@ -622,6 +596,9 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
     }
 }
 
+/**
+ *
+ */
 - (BOOL)waitForInput:(int)milliseconds
 {
     // Return NO if we timed out waiting for input, otherwise return YES.
@@ -629,7 +606,7 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
 
     // Only start the run loop if the input queue is empty, otherwise process
     // the input first so that the input on queue isn't delayed.
-    if ([inputQueue count]) {
+    if ([inputQueue count] > 0) {
         inputReceived = YES;
     } else {
         // Wait for the specified amount of time, unless 'milliseconds' is
@@ -676,6 +653,7 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
             [self queueMessage:CloseWindowMsgID data:nil];
             ASLogDebug(@"Flush output queue before exit: %@",
                        debugStringForMessageQueue(outputQueue));
+            // MacVimのメソッド呼び出し
             [appProxy processInput:outputQueue forIdentifier:identifier];
         }
         @catch (NSException *ex) {
@@ -804,6 +782,7 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
     return (char *)s;
 }
 
+#pragma mark - MMBackendProtocol
 - (oneway void)setDialogReturn:(in bycopy id)obj
 {
     ASLogDebug(@"%@", obj);
@@ -1128,8 +1107,20 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
     [self queueMessage:SetBuffersModifiedMsgID data:data];
 }
 
+#pragma mark - MMBackendProtocol
+/**
+ * @brief 使用されている
+ */
 - (oneway void)processInput:(int)msgid data:(in bycopy NSData *)data
 {
+    /*
+    if( msgid == MouseMovedMsgID ){
+    } else {
+        fprintf( fp, "msgid[%d]\n", msgid );
+        fflush( fp );
+    }
+    */
+    
     //
     // This is a DO method which is called from inside MacVim to add new input
     // to this Vim process.  It may get called when the run loop is updated.
@@ -1205,8 +1196,8 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
         // queue, else the input queue may fill up as a result of Vim not being
         // able to keep up with the speed at which new messages are received.
         // TODO: Remove all previous instances (there could be many)?
-        int i, count = (int)[inputQueue count];
-        for (i = 1; i < count; i += 2) {
+        int count = (int)[inputQueue count];
+        for (int i = 1; i < count; i += 2) {
             if ([[inputQueue objectAtIndex:i-1] intValue] == msgid) {
                 ASLogDebug(@"Input queue filling up, remove message: %s",
                                                         MessageStrings[msgid]);
@@ -1230,6 +1221,7 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
 }
 
 
+#pragma mark - MMBackendProtocol
 - (NSString *)evaluateExpression:(in bycopy NSString *)expr
 {
     NSString *eval = nil;
@@ -1311,6 +1303,7 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
     return NO;
 }
 
+#pragma mark - MMVimClientProtocol
 - (oneway void)addReply:(in bycopy NSString *)reply
                  server:(in byref id <MMVimServerProtocol>)server
 {
@@ -1333,8 +1326,9 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
     [replies addObject:reply];
 }
 
-- (void)addInput:(in bycopy NSString *)input
-          client:(in byref id <MMVimClientProtocol>)client
+#pragma mark - MMVimServerProtocol
+// pebble8888 使っていない
+- (void)addInput:(in bycopy NSString *)input client:(in byref id <MMVimClientProtocol>)client
 {
     ASLogDebug(@"input=%@ client=%@", input, (id)client);
 
@@ -1349,6 +1343,7 @@ extern GuiFont gui_mch_retain_font(GuiFont font);
     [self addClient:(id)client];
 }
 
+#pragma mark - MMVimServerProtocol
 - (NSString *)evaluateExpression:(in bycopy NSString *)expr
                  client:(in byref id <MMVimClientProtocol>)client
 {
@@ -1776,6 +1771,9 @@ static void netbeansReadCallback(CFSocketRef s,
                       atIndex:0];
 }
 
+/**
+ *
+ */
 - (void)processInputQueue
 {
     if ([inputQueue count] == 0) return;
@@ -1803,6 +1801,9 @@ static void netbeansReadCallback(CFSocketRef s,
 }
 
 
+/**
+ *
+ */
 - (void)handleInputEvent:(int)msgid data:(NSData *)data
 {
     if (ScrollWheelMsgID == msgid) {
@@ -1908,7 +1909,7 @@ static void netbeansReadCallback(CFSocketRef s,
         NSString *string = [[NSString alloc] initWithData:data
                 encoding:NSUTF8StringEncoding];
         if (string) {
-            [self addInput:string];
+            [self addInputWithString:string];
             [string release];
         }
     } else if (SelectTabMsgID == msgid) {
@@ -2657,7 +2658,7 @@ static void netbeansReadCallback(CFSocketRef s,
             }
 
             // Make sure we're in normal mode first.
-            [self addInput:@"<C-\\><C-N>"];
+            [self addInputWithString:@"<C-\\><C-N>"];
 
             if (numFiles > 1) {
                 // With "split layout" we open a new tab before opening
@@ -2667,7 +2668,7 @@ static void netbeansReadCallback(CFSocketRef s,
                 // their own window.)
                 if ((WIN_HOR == layout || WIN_VER == layout) &&
                         (!oneWindowInTab || bufHasFilename))
-                    [self addInput:@":tabnew<CR>"];
+                    [self addInputWithString:@":tabnew<CR>"];
 
                 // The files are opened by constructing a ":drop ..." command
                 // and executing it.
@@ -2684,18 +2685,18 @@ static void netbeansReadCallback(CFSocketRef s,
 
                 // Temporarily clear 'suffixes' so that the files are opened in
                 // the same order as they appear in the "filenames" array.
-                [self addInput:@":let mvim_oldsu=&su|set su=<CR>"];
+                [self addInputWithString:@":let mvim_oldsu=&su|set su=<CR>"];
 
-                [self addInput:cmd];
+                [self addInputWithString:cmd];
 
                 // Split the view into multiple windows if requested.
                 if (WIN_HOR == layout)
-                    [self addInput:@"|sall"];
+                    [self addInputWithString:@"|sall"];
                 else if (WIN_VER == layout)
-                    [self addInput:@"|vert sall"];
+                    [self addInputWithString:@"|vert sall"];
 
                 // Restore the old value of 'suffixes'.
-                [self addInput:@"|let &su=mvim_oldsu|unlet mvim_oldsu<CR>"];
+                [self addInputWithString:@"|let &su=mvim_oldsu|unlet mvim_oldsu<CR>"];
             } else {
                 // When opening one file we try to reuse the current window,
                 // but not if its buffer is modified or has a filename.
@@ -2725,8 +2726,8 @@ static void netbeansReadCallback(CFSocketRef s,
                     cmd = [NSString stringWithFormat:@":drop %@", file];
                 }
 
-                [self addInput:cmd];
-                [self addInput:@"<CR>"];
+                [self addInputWithString:cmd];
+                [self addInputWithString:@"<CR>"];
             }
 
             // Force screen redraw (does it have to be this complicated?).
@@ -2757,7 +2758,7 @@ static void netbeansReadCallback(CFSocketRef s,
 
         NSString *cmd = [NSString stringWithFormat:@"<C-\\><C-N>:cal "
                 "cursor(%@,%@)|norm! zz<CR>:f<CR>", lineString, columnString];
-        [self addInput:cmd];
+        [self addInputWithString:cmd];
     }
 
     NSString *rangeString = [args objectForKey:@"selectionRange"];
@@ -2776,14 +2777,14 @@ static void netbeansReadCallback(CFSocketRef s,
                     range.location];
         }
 
-        [self addInput:cmd];
+        [self addInputWithString:cmd];
     }
 
     NSString *searchText = [args objectForKey:@"searchText"];
     if (searchText) {
         // NOTE: This command may be overkill to simply search for some text,
         // but it is consistent with what is used in MMAppController.
-        [self addInput:[NSString stringWithFormat:@"<C-\\><C-N>:if search("
+        [self addInputWithString:[NSString stringWithFormat:@"<C-\\><C-N>:if search("
                         "'\\V\\c%@','cW')|let @/='\\V\\c%@'|set hls|endif<CR>",
                         searchText, searchText]];
     }
@@ -2807,13 +2808,13 @@ static void netbeansReadCallback(CFSocketRef s,
     return 0;
 }
 
-- (void)addInput:(NSString *)input
+- (void)addInputWithString:(NSString *)input
 {
     // NOTE: This code is essentially identical to server_to_input_buf(),
     // except the 'silent' flag is TRUE in the call to ins_typebuf() below.
     char_u *string = [input vimStringSave];
     if (!string) return;
-
+    
     /* Set 'cpoptions' the way we want it.
      *    B set - backslashes are *not* treated specially
      *    k set - keycodes are *not* reverse-engineered
@@ -2826,24 +2827,24 @@ static void netbeansReadCallback(CFSocketRef s,
     p_cpo = (char_u *)"Bk";
     char_u *str = replace_termcodes((char_u *)string, &ptr, FALSE, TRUE, FALSE);
     p_cpo = cpo_save;
-
+    
     if (*ptr != NUL)	/* trailing CTRL-V results in nothing */
     {
-	/*
-	 * Add the string to the input stream.
-	 * Can't use add_to_input_buf() here, we now have K_SPECIAL bytes.
-	 *
-	 * First clear typed characters from the typeahead buffer, there could
-	 * be half a mapping there.  Then append to the existing string, so
-	 * that multiple commands from a client are concatenated.
-	 */
-	if (typebuf.tb_maplen < typebuf.tb_len)
-	    del_typebuf(typebuf.tb_len - typebuf.tb_maplen, typebuf.tb_maplen);
-	(void)ins_typebuf(str, REMAP_NONE, typebuf.tb_len, TRUE, TRUE);
-
-	/* Let input_available() know we inserted text in the typeahead
-	 * buffer. */
-	typebuf_was_filled = TRUE;
+        /*
+         * Add the string to the input stream.
+         * Can't use add_to_input_buf() here, we now have K_SPECIAL bytes.
+         *
+         * First clear typed characters from the typeahead buffer, there could
+         * be half a mapping there.  Then append to the existing string, so
+         * that multiple commands from a client are concatenated.
+         */
+        if (typebuf.tb_maplen < typebuf.tb_len)
+            del_typebuf(typebuf.tb_len - typebuf.tb_maplen, typebuf.tb_maplen);
+        (void)ins_typebuf(str, REMAP_NONE, typebuf.tb_len, TRUE, TRUE);
+        
+        /* Let input_available() know we inserted text in the typeahead
+         * buffer. */
+        typebuf_was_filled = TRUE;
     }
     vim_free(ptr);
     vim_free(string);
@@ -2907,16 +2908,22 @@ static void netbeansReadCallback(CFSocketRef s,
     char *chars = (char *)bytes;
 
     ASLogDebug(@"pos=%d len=%d chars=%s", pos, len, chars);
+    
+    /*
+    fprintf( fp, "pos[%d] len[%d] chars[%s]", pos, len, chars );
+    fflush( fp );
+    */
 
     if (pos < 0) {
         im_preedit_abandon_macvim();
     } else if (len == 0) {
-	im_preedit_end_macvim();
+    	im_preedit_end_macvim();
     } else {
-        if (!preedit_get_status())
+        if (!preedit_get_status()){
             im_preedit_start_macvim();
+        }
 
-	im_preedit_changed_macvim(chars, pos);
+    	im_preedit_changed_macvim(chars, pos);
     }
 }
 

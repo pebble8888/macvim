@@ -2391,8 +2391,14 @@ utf_iscomposing(c)
 	{0x2cef, 0x2cf1},
 	{0x2d7f, 0x2d7f},
 	{0x2de0, 0x2dff},
-	{0x302a, 0x302f},
-	{0x3099, 0x309a},
+	{0x302a, 0x302f}, // IDEOGRAHIC LEVEL TONE MARK, 
+                          // IDEOGRAPHIC RISING TONE MARK
+                          // IDEOGRAPHIC DEPARTINGTONE MARK
+                          // IDEOGRAPHIC ENTERING TONE MARK
+                          // HANGUL SINGLE DOT TONE MARK
+                          // HANGUL DOUBLE DOT TONE MARK
+	{0x3099, 0x309a}, // COMBINING KATAKANA-HIRAGANA VOICED SOUND MARK
+                          // COMBINING KATAKANA-HIRAGANA SEMI-VOICED SOUND MARK
 	{0xa66f, 0xa672},
 	{0xa674, 0xa67d},
 	{0xa69f, 0xa69f},
@@ -3537,19 +3543,6 @@ utf_head_off(base, p)
 	if (utf_iscomposing(c))
 	    continue;
 
-#ifdef FEAT_ARABIC
-	if (arabic_maycombine(c))
-	{
-	    /* Advance to get a sneak-peak at the next char */
-	    j = q;
-	    --j;
-	    /* Move j to the first byte of this char. */
-	    while (j > base && (*j & 0xc0) == 0x80)
-		--j;
-	    if (arabic_combine(utf_ptr2char(j), c))
-		continue;
-	}
-#endif
 	break;
     }
 
@@ -4790,21 +4783,11 @@ im_preedit_end_cb(GtkIMContext *context UNUSED, gpointer data UNUSED)
 im_preedit_end_macvim()
 # endif
 {
-#ifdef XIM_DEBUG
-    xim_log("im_preedit_end_cb()\n");
-#endif
     im_delete_preedit();
 
     /* Indicate that preediting has finished */
     preedit_start_col = MAXCOL;
     xim_has_preediting = FALSE;
-
-#if 0
-    /* Removal of this line suggested by Takuhiro Nishioka.  Fixes that IM was
-     * switched off unintentionally.  We now use preedit_is_active (added by
-     * SungHyun Nam). */
-    im_is_active = FALSE;
-#endif
     preedit_is_active = FALSE;
     gui_update_cursor(TRUE, FALSE);
     im_show_info();
@@ -4859,32 +4842,13 @@ im_preedit_abandon_macvim()
  * remaining input from within the "retrieve_surrounding" signal handler, this
  * might not be necessary.  Gotta ask on vim-dev for opinions.
  */
-# ifndef FEAT_GUI_MACVIM
-    static void
-im_preedit_changed_cb(GtkIMContext *context, gpointer data UNUSED)
-# else
     void
 im_preedit_changed_macvim(char *preedit_string, int cursor_index)
-# endif
 {
-# ifndef FEAT_GUI_MACVIM
-    char    *preedit_string = NULL;
-    int	    cursor_index    = 0;
-# endif
     int	    num_move_back   = 0;
     char_u  *str;
     char_u  *p;
     int	    i;
-
-# ifndef FEAT_GUI_MACVIM
-    gtk_im_context_get_preedit_string(context,
-				      &preedit_string, NULL,
-				      &cursor_index);
-# endif
-
-#ifdef XIM_DEBUG
-    xim_log("im_preedit_changed_cb(): %s\n", preedit_string);
-#endif
 
     g_return_if_fail(preedit_string != NULL); /* just in case */
 
@@ -4914,14 +4878,14 @@ im_preedit_changed_macvim(char *preedit_string, int cursor_index)
      * unfortunately not true -- real life shows the offset is in characters,
      * and the GTK+ source code agrees with me.  Will file a bug later.
      */
-    if (preedit_start_col != MAXCOL)
+    if (preedit_start_col != MAXCOL){
 	preedit_end_col = preedit_start_col;
+    }
     str = (char_u *)preedit_string;
     for (p = str, i = 0; *p != NUL; p += utf_byte2len(*p), ++i)
     {
-	int is_composing;
-
-	is_composing = ((*p & 0x80) != 0 && utf_iscomposing(utf_ptr2char(p)));
+	    //const int is_composing = ((*p & 0x80) != 0 && utf_iscomposing(utf_ptr2char(p)));
+        const int is_composing = false;
 	/*
 	 * These offsets are used as counters when generating <BS> and <Del>
 	 * to delete the preedit string.  So don't count composing characters
@@ -4950,12 +4914,6 @@ im_preedit_changed_macvim(char *preedit_string, int cursor_index)
 	im_correct_cursor(num_move_back);
     }
 
-# ifndef FEAT_GUI_MACVIM
-    g_free(preedit_string);
-
-    if (gtk_main_level() > 0)
-	gtk_main_quit();
-# endif
 }
 
 # ifndef FEAT_GUI_MACVIM
@@ -6228,12 +6186,12 @@ string_convert(vcp, ptr, lenp)
  * an incomplete sequence at the end it is not converted and "*unconvlenp" is
  * set to the number of remaining bytes.
  */
-    char_u *
+char_u *
 string_convert_ext(vcp, ptr, lenp, unconvlenp)
-    vimconv_T	*vcp;
-    char_u	*ptr;
-    int		*lenp;
-    int		*unconvlenp;
+vimconv_T	*vcp;
+char_u	*ptr;
+int		*lenp;
+int		*unconvlenp;
 {
     char_u	*retval = NULL;
     char_u	*d;
@@ -6241,226 +6199,171 @@ string_convert_ext(vcp, ptr, lenp, unconvlenp)
     int		i;
     int		l;
     int		c;
-
-    if (lenp == NULL)
-	len = (int)STRLEN(ptr);
-    else
-	len = *lenp;
-    if (len == 0)
-	return vim_strsave((char_u *)"");
-
+    
+    if (lenp == NULL){
+        len = (int)STRLEN(ptr);
+    }
+    else {
+        len = *lenp;
+    }
+    if (len == 0){
+        return vim_strsave((char_u *)"");
+    }
+    
     switch (vcp->vc_type)
     {
-	case CONV_TO_UTF8:	/* latin1 to utf-8 conversion */
-	    retval = alloc(len * 2 + 1);
-	    if (retval == NULL)
-		break;
-	    d = retval;
-	    for (i = 0; i < len; ++i)
-	    {
-		c = ptr[i];
-		if (c < 0x80)
-		    *d++ = c;
-		else
-		{
-		    *d++ = 0xc0 + ((unsigned)c >> 6);
-		    *d++ = 0x80 + (c & 0x3f);
-		}
-	    }
-	    *d = NUL;
-	    if (lenp != NULL)
-		*lenp = (int)(d - retval);
-	    break;
-
-	case CONV_9_TO_UTF8:	/* latin9 to utf-8 conversion */
-	    retval = alloc(len * 3 + 1);
-	    if (retval == NULL)
-		break;
-	    d = retval;
-	    for (i = 0; i < len; ++i)
-	    {
-		c = ptr[i];
-		switch (c)
-		{
-		    case 0xa4: c = 0x20ac; break;   /* euro */
-		    case 0xa6: c = 0x0160; break;   /* S hat */
-		    case 0xa8: c = 0x0161; break;   /* S -hat */
-		    case 0xb4: c = 0x017d; break;   /* Z hat */
-		    case 0xb8: c = 0x017e; break;   /* Z -hat */
-		    case 0xbc: c = 0x0152; break;   /* OE */
-		    case 0xbd: c = 0x0153; break;   /* oe */
-		    case 0xbe: c = 0x0178; break;   /* Y */
-		}
-		d += utf_char2bytes(c, d);
-	    }
-	    *d = NUL;
-	    if (lenp != NULL)
-		*lenp = (int)(d - retval);
-	    break;
-
-	case CONV_TO_LATIN1:	/* utf-8 to latin1 conversion */
-	case CONV_TO_LATIN9:	/* utf-8 to latin9 conversion */
-	    retval = alloc(len + 1);
-	    if (retval == NULL)
-		break;
-	    d = retval;
-	    for (i = 0; i < len; ++i)
-	    {
-		l = utf_ptr2len_len(ptr + i, len - i);
-		if (l == 0)
-		    *d++ = NUL;
-		else if (l == 1)
-		{
-		    int l_w = utf8len_tab_zero[ptr[i]];
-
-		    if (l_w == 0)
-		    {
-			/* Illegal utf-8 byte cannot be converted */
-			vim_free(retval);
-			return NULL;
-		    }
-		    if (unconvlenp != NULL && l_w > len - i)
-		    {
-			/* Incomplete sequence at the end. */
-			*unconvlenp = len - i;
-			break;
-		    }
-		    *d++ = ptr[i];
-		}
-		else
-		{
-		    c = utf_ptr2char(ptr + i);
-		    if (vcp->vc_type == CONV_TO_LATIN9)
-			switch (c)
-			{
-			    case 0x20ac: c = 0xa4; break;   /* euro */
-			    case 0x0160: c = 0xa6; break;   /* S hat */
-			    case 0x0161: c = 0xa8; break;   /* S -hat */
-			    case 0x017d: c = 0xb4; break;   /* Z hat */
-			    case 0x017e: c = 0xb8; break;   /* Z -hat */
-			    case 0x0152: c = 0xbc; break;   /* OE */
-			    case 0x0153: c = 0xbd; break;   /* oe */
-			    case 0x0178: c = 0xbe; break;   /* Y */
-			    case 0xa4:
-			    case 0xa6:
-			    case 0xa8:
-			    case 0xb4:
-			    case 0xb8:
-			    case 0xbc:
-			    case 0xbd:
-			    case 0xbe: c = 0x100; break; /* not in latin9 */
-			}
-		    if (!utf_iscomposing(c))	/* skip composing chars */
-		    {
-			if (c < 0x100)
-			    *d++ = c;
-			else if (vcp->vc_fail)
-			{
-			    vim_free(retval);
-			    return NULL;
-			}
-			else
-			{
-			    *d++ = 0xbf;
-			    if (utf_char2cells(c) > 1)
-				*d++ = '?';
-			}
-		    }
-		    i += l - 1;
-		}
-	    }
-	    *d = NUL;
-	    if (lenp != NULL)
-		*lenp = (int)(d - retval);
-	    break;
-
+        case CONV_TO_UTF8:	/* latin1 to utf-8 conversion */
+            retval = alloc(len * 2 + 1);
+            if (retval == NULL)
+                break;
+            d = retval;
+            for (i = 0; i < len; ++i)
+            {
+                c = ptr[i];
+                if (c < 0x80)
+                    *d++ = c;
+                else
+                {
+                    *d++ = 0xc0 + ((unsigned)c >> 6);
+                    *d++ = 0x80 + (c & 0x3f);
+                }
+            }
+            *d = NUL;
+            if (lenp != NULL)
+                *lenp = (int)(d - retval);
+            break;
+            
+        case CONV_9_TO_UTF8:	/* latin9 to utf-8 conversion */
+            retval = alloc(len * 3 + 1);
+            if (retval == NULL)
+                break;
+            d = retval;
+            for (i = 0; i < len; ++i)
+            {
+                c = ptr[i];
+                switch (c)
+                {
+                    case 0xa4: c = 0x20ac; break;   /* euro */
+                    case 0xa6: c = 0x0160; break;   /* S hat */
+                    case 0xa8: c = 0x0161; break;   /* S -hat */
+                    case 0xb4: c = 0x017d; break;   /* Z hat */
+                    case 0xb8: c = 0x017e; break;   /* Z -hat */
+                    case 0xbc: c = 0x0152; break;   /* OE */
+                    case 0xbd: c = 0x0153; break;   /* oe */
+                    case 0xbe: c = 0x0178; break;   /* Y */
+                }
+                d += utf_char2bytes(c, d);
+            }
+            *d = NUL;
+            if (lenp != NULL)
+                *lenp = (int)(d - retval);
+            break;
+            
+        case CONV_TO_LATIN1:	/* utf-8 to latin1 conversion */
+        case CONV_TO_LATIN9:	/* utf-8 to latin9 conversion */
+            retval = alloc(len + 1);
+            if (retval == NULL)
+                break;
+            d = retval;
+            for (i = 0; i < len; ++i)
+            {
+                l = utf_ptr2len_len(ptr + i, len - i);
+                if (l == 0)
+                    *d++ = NUL;
+                else if (l == 1)
+                {
+                    int l_w = utf8len_tab_zero[ptr[i]];
+                    
+                    if (l_w == 0)
+                    {
+                        /* Illegal utf-8 byte cannot be converted */
+                        vim_free(retval);
+                        return NULL;
+                    }
+                    if (unconvlenp != NULL && l_w > len - i)
+                    {
+                        /* Incomplete sequence at the end. */
+                        *unconvlenp = len - i;
+                        break;
+                    }
+                    *d++ = ptr[i];
+                }
+                else
+                {
+                    c = utf_ptr2char(ptr + i);
+                    if (vcp->vc_type == CONV_TO_LATIN9)
+                        switch (c)
+                    {
+                        case 0x20ac: c = 0xa4; break;   /* euro */
+                        case 0x0160: c = 0xa6; break;   /* S hat */
+                        case 0x0161: c = 0xa8; break;   /* S -hat */
+                        case 0x017d: c = 0xb4; break;   /* Z hat */
+                        case 0x017e: c = 0xb8; break;   /* Z -hat */
+                        case 0x0152: c = 0xbc; break;   /* OE */
+                        case 0x0153: c = 0xbd; break;   /* oe */
+                        case 0x0178: c = 0xbe; break;   /* Y */
+                        case 0xa4:
+                        case 0xa6:
+                        case 0xa8:
+                        case 0xb4:
+                        case 0xb8:
+                        case 0xbc:
+                        case 0xbd:
+                        case 0xbe: c = 0x100; break; /* not in latin9 */
+                    }
+                    if (!utf_iscomposing(c))	/* skip composing chars */
+                    {
+                        if (c < 0x100)
+                            *d++ = c;
+                        else if (vcp->vc_fail)
+                        {
+                            vim_free(retval);
+                            return NULL;
+                        }
+                        else
+                        {
+                            *d++ = 0xbf;
+                            if (utf_char2cells(c) > 1)
+                                *d++ = '?';
+                        }
+                    }
+                    i += l - 1;
+                }
+            }
+            *d = NUL;
+            if (lenp != NULL)
+                *lenp = (int)(d - retval);
+            break;
+            
 # ifdef MACOS_CONVERT
-	case CONV_MAC_LATIN1:
-	    retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
-					'm', 'l', unconvlenp);
-	    break;
-
-	case CONV_LATIN1_MAC:
-	    retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
-					'l', 'm', unconvlenp);
-	    break;
-
-	case CONV_MAC_UTF8:
-	    retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
-					'm', 'u', unconvlenp);
-	    break;
-
-	case CONV_UTF8_MAC:
-	    retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
-					'u', 'm', unconvlenp);
-	    break;
+        case CONV_MAC_LATIN1:
+            retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
+                                        'm', 'l', unconvlenp);
+            break;
+            
+        case CONV_LATIN1_MAC:
+            retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
+                                        'l', 'm', unconvlenp);
+            break;
+            
+        case CONV_MAC_UTF8:
+            retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
+                                        'm', 'u', unconvlenp);
+            break;
+            
+        case CONV_UTF8_MAC:
+            retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
+                                        'u', 'm', unconvlenp);
+            break;
 # endif
-
+            
 # ifdef USE_ICONV
-	case CONV_ICONV:	/* conversion with output_conv.vc_fd */
-	    retval = iconv_string(vcp, ptr, len, unconvlenp, lenp);
-	    break;
-# endif
-# ifdef WIN3264
-	case CONV_CODEPAGE:		/* codepage -> codepage */
-	{
-	    int		retlen;
-	    int		tmp_len;
-	    short_u	*tmp;
-
-	    /* 1. codepage/UTF-8  ->  ucs-2. */
-	    if (vcp->vc_cpfrom == 0)
-		tmp_len = utf8_to_utf16(ptr, len, NULL, NULL);
-	    else
-	    {
-		tmp_len = MultiByteToWideChar(vcp->vc_cpfrom,
-					unconvlenp ? MB_ERR_INVALID_CHARS : 0,
-					ptr, len, 0, 0);
-		if (tmp_len == 0
-			&& GetLastError() == ERROR_NO_UNICODE_TRANSLATION)
-		{
-		    if (lenp != NULL)
-			*lenp = 0;
-		    if (unconvlenp != NULL)
-			*unconvlenp = len;
-		    retval = alloc(1);
-		    if (retval)
-			retval[0] = NUL;
-		    return retval;
-		}
-	    }
-	    tmp = (short_u *)alloc(sizeof(short_u) * tmp_len);
-	    if (tmp == NULL)
-		break;
-	    if (vcp->vc_cpfrom == 0)
-		utf8_to_utf16(ptr, len, tmp, unconvlenp);
-	    else
-		MultiByteToWideChar(vcp->vc_cpfrom, 0, ptr, len, tmp, tmp_len);
-
-	    /* 2. ucs-2  ->  codepage/UTF-8. */
-	    if (vcp->vc_cpto == 0)
-		retlen = utf16_to_utf8(tmp, tmp_len, NULL);
-	    else
-		retlen = WideCharToMultiByte(vcp->vc_cpto, 0,
-						    tmp, tmp_len, 0, 0, 0, 0);
-	    retval = alloc(retlen + 1);
-	    if (retval != NULL)
-	    {
-		if (vcp->vc_cpto == 0)
-		    utf16_to_utf8(tmp, tmp_len, retval);
-		else
-		    WideCharToMultiByte(vcp->vc_cpto, 0,
-					  tmp, tmp_len, retval, retlen, 0, 0);
-		retval[retlen] = NUL;
-		if (lenp != NULL)
-		    *lenp = retlen;
-	    }
-	    vim_free(tmp);
-	    break;
-	}
+        case CONV_ICONV:	/* conversion with output_conv.vc_fd */
+            retval = iconv_string(vcp, ptr, len, unconvlenp, lenp);
+            break;
 # endif
     }
-
+    
     return retval;
 }
 #endif

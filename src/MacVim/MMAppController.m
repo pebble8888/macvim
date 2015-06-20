@@ -1261,6 +1261,11 @@ fsEventCallback(ConstFSEventStreamRef streamRef,
     return nil;
 }
 
+/**
+ * @brief
+ * @note vimからMacVimのメソッド呼び出し
+ */
+#pragma mark - MMAppProtocol
 - (unsigned)connectBackend:(byref in id <MMBackendProtocol>)proxy pid:(int)pid
 {
     ASLogDebug(@"pid=%d", pid);
@@ -1290,6 +1295,11 @@ fsEventCallback(ConstFSEventStreamRef streamRef,
     return [vc vimControllerId];
 }
 
+/**
+ * @brief
+ * @note vimからMacVimのメソッド呼び出し
+ */
+#pragma mark - MMAppProtocol
 - (oneway void)processInput:(in bycopy NSArray *)queue
               forIdentifier:(unsigned)identifier
 {
@@ -1328,6 +1338,11 @@ fsEventCallback(ConstFSEventStreamRef streamRef,
                                        NSEventTrackingRunLoopMode, nil]];
 }
 
+/**
+ * @brief
+ * @note vimからMacVimのメソッド呼び出し
+ */
+#pragma mark - MMAppProtocol
 - (NSArray *)serverList
 {
     NSMutableArray *array = [NSMutableArray array];
