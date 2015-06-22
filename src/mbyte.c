@@ -97,10 +97,6 @@
 # define WINBYTE BYTE
 #endif
 
-#if (defined(WIN3264) || defined(WIN32UNIX)) && !defined(__MINGW32__)
-# include <winnls.h>
-#endif
-
 #ifdef FEAT_GUI_X11
 # include <X11/Intrinsic.h>
 #endif
@@ -108,25 +104,8 @@
 #include <X11/Xlocale.h>
 #endif
 
-#if defined(FEAT_GUI_GTK) && defined(FEAT_XIM)
-# include <gdk/gdkkeysyms.h>
-# ifdef WIN3264
-#  include <gdk/gdkwin32.h>
-# else
-#  include <gdk/gdkx.h>
-# endif
-#endif
-
 #ifdef HAVE_WCHAR_H
 # include <wchar.h>
-#endif
-
-#if 0
-/* This has been disabled, because several people reported problems with the
- * wcwidth() and iswprint() library functions, esp. for Hebrew. */
-# ifdef __STDC_ISO_10646__
-#  define USE_WCHAR_FUNCTIONS
-# endif
 #endif
 
 #if defined(FEAT_MBYTE) || defined(PROTO)
@@ -204,9 +183,9 @@ xim_log(char *s, ...)
     vfprintf(fd, s, arglist);
     va_end(arglist);
 }
-#endif
+#endif /* XIM_DEBUG */
 
-#endif
+#endif /* FEAT_MBYTE */
 
 #if defined(FEAT_MBYTE) || defined(FEAT_POSTSCRIPT) || defined(PROTO)
 /*
@@ -363,11 +342,7 @@ enc_alias_table[] =
     {"cyrillic",	IDX_ISO_5},
     {"arabic",		IDX_ISO_6},
     {"greek",		IDX_ISO_7},
-#ifdef WIN3264
-    {"hebrew",		IDX_CP1255},
-#else
     {"hebrew",		IDX_ISO_8},
-#endif
     {"latin5",		IDX_ISO_9},
     {"turkish",		IDX_ISO_9}, /* ? */
     {"latin6",		IDX_ISO_10},
@@ -454,8 +429,6 @@ enc_canon_search(name)
 
 #endif
 
-#if defined(FEAT_MBYTE) || defined(PROTO)
-
 /*
  * Find canonical encoding "name" in the list and return its properties.
  * Returns 0 if not found.
@@ -469,24 +442,6 @@ enc_canon_props(name)
     i = enc_canon_search(name);
     if (i >= 0)
 	return enc_canon_table[i].prop;
-#ifdef WIN3264
-    if (name[0] == 'c' && name[1] == 'p' && VIM_ISDIGIT(name[2]))
-    {
-	CPINFO	cpinfo;
-
-	/* Get info on this codepage to find out what it is. */
-	if (GetCPInfo(atoi(name + 2), &cpinfo) != 0)
-	{
-	    if (cpinfo.MaxCharSize == 1) /* some single-byte encoding */
-		return ENC_8BIT;
-	    if (cpinfo.MaxCharSize == 2
-		    && (cpinfo.LeadByte[0] != 0 || cpinfo.LeadByte[1] != 0))
-		/* must be a DBCS encoding */
-		return ENC_DBCS;
-	}
-	return 0;
-    }
-#endif
     if (STRNCMP(name, "2byte-", 6) == 0)
 	return ENC_DBCS;
     if (STRNCMP(name, "8bit-", 5) == 0 || STRNCMP(name, "iso-8859-", 9) == 0)
@@ -513,12 +468,6 @@ mb_init()
     int		idx;
     int		n;
     int		enc_dbcs_new = 0;
-#if defined(USE_ICONV) && !defined(WIN3264) && !defined(WIN32UNIX) \
-	&& !defined(MACOS)
-# define LEN_FROM_CONV
-    vimconv_T	vimconv;
-    char_u	*p;
-#endif
 
     if (p_enc == NULL)
     {
@@ -531,36 +480,6 @@ mb_init()
 	return NULL;
     }
 
-#ifdef WIN3264
-    if (p_enc[0] == 'c' && p_enc[1] == 'p' && VIM_ISDIGIT(p_enc[2]))
-    {
-	CPINFO	cpinfo;
-
-	/* Get info on this codepage to find out what it is. */
-	if (GetCPInfo(atoi(p_enc + 2), &cpinfo) != 0)
-	{
-	    if (cpinfo.MaxCharSize == 1)
-	    {
-		/* some single-byte encoding */
-		enc_unicode = 0;
-		enc_utf8 = FALSE;
-	    }
-	    else if (cpinfo.MaxCharSize == 2
-		    && (cpinfo.LeadByte[0] != 0 || cpinfo.LeadByte[1] != 0))
-	    {
-		/* must be a DBCS encoding, check below */
-		enc_dbcs_new = atoi(p_enc + 2);
-	    }
-	    else
-		goto codepage_invalid;
-	}
-	else if (GetLastError() == ERROR_INVALID_PARAMETER)
-	{
-codepage_invalid:
-	    return (char_u *)N_("E543: Not a valid codepage");
-	}
-    }
-#endif
     else if (STRNCMP(p_enc, "8bit-", 5) == 0
 	    || STRNCMP(p_enc, "iso-8859-", 9) == 0)
     {
@@ -570,15 +489,8 @@ codepage_invalid:
     }
     else if (STRNCMP(p_enc, "2byte-", 6) == 0)
     {
-#ifdef WIN3264
-	/* Windows: accept only valid codepage numbers, check below. */
-	if (p_enc[6] != 'c' || p_enc[7] != 'p'
-				      || (enc_dbcs_new = atoi(p_enc + 8)) == 0)
-	    return e_invarg;
-#else
 	/* Unix: accept any "2byte-" name, assume current locale. */
 	enc_dbcs_new = DBCS_2BYTE;
-#endif
     }
     else if ((idx = enc_canon_search(p_enc)) >= 0)
     {
@@ -611,21 +523,11 @@ codepage_invalid:
 
     if (enc_dbcs_new != 0)
     {
-#ifdef WIN3264
-	/* Check if the DBCS code page is OK. */
-	if (!IsValidCodePage(enc_dbcs_new))
-	    goto codepage_invalid;
-#endif
 	enc_unicode = 0;
 	enc_utf8 = FALSE;
     }
     enc_dbcs = enc_dbcs_new;
     has_mbyte = (enc_dbcs != 0 || enc_utf8);
-
-#if defined(WIN3264) || defined(FEAT_CYGWIN_WIN32_CLIPBOARD)
-    enc_codepage = encname2codepage(p_enc);
-    enc_latin9 = (STRCMP(p_enc, "iso-8859-15") == 0);
-#endif
 
     /* Detect an encoding that uses latin1 characters. */
     enc_latin1like = (enc_utf8 || STRCMP(p_enc, "latin1") == 0
@@ -677,21 +579,6 @@ codepage_invalid:
     /*
      * Fill the mb_bytelen_tab[] for MB_BYTE2LEN().
      */
-#ifdef LEN_FROM_CONV
-    /* When 'encoding' is different from the current locale mblen() won't
-     * work.  Use conversion to "utf-8" instead. */
-    vimconv.vc_type = CONV_NONE;
-    if (enc_dbcs)
-    {
-	p = enc_locale();
-	if (p == NULL || STRCMP(p, p_enc) != 0)
-	{
-	    convert_setup(&vimconv, p_enc, (char_u *)"utf-8");
-	    vimconv.vc_fail = TRUE;
-	}
-	vim_free(p);
-    }
-#endif
 
     for (i = 0; i < 256; ++i)
     {
@@ -703,74 +590,16 @@ codepage_invalid:
 	    n = 1;
 	else
 	{
-#if defined(WIN3264) || defined(WIN32UNIX)
-	    /* enc_dbcs is set by setting 'fileencoding'.  It becomes a Windows
-	     * CodePage identifier, which we can pass directly in to Windows
-	     * API */
-	    n = IsDBCSLeadByteEx(enc_dbcs, (WINBYTE)i) ? 2 : 1;
-#else
-# if defined(MACOS) || defined(__amigaos4__) || defined(__ANDROID__)
 	    /*
 	     * if mblen() is not available, character which MSB is turned on
 	     * are treated as leading byte character. (note : This assumption
 	     * is not always true.)
 	     */
 	    n = (i & 0x80) ? 2 : 1;
-# else
-	    char buf[MB_MAXBYTES + 1];
-# ifdef X_LOCALE
-#  ifndef mblen
-#   define mblen _Xmblen
-#  endif
-# endif
-	    if (i == NUL)	/* just in case mblen() can't handle "" */
-		n = 1;
-	    else
-	    {
-		buf[0] = i;
-		buf[1] = 0;
-#ifdef LEN_FROM_CONV
-		if (vimconv.vc_type != CONV_NONE)
-		{
-		    /*
-		     * string_convert() should fail when converting the first
-		     * byte of a double-byte character.
-		     */
-		    p = string_convert(&vimconv, (char_u *)buf, NULL);
-		    if (p != NULL)
-		    {
-			vim_free(p);
-			n = 1;
-		    }
-		    else
-			n = 2;
-		}
-		else
-#endif
-		{
-		    /*
-		     * mblen() should return -1 for invalid (means the leading
-		     * multibyte) character.  However there are some platforms
-		     * where mblen() returns 0 for invalid character.
-		     * Therefore, following condition includes 0.
-		     */
-		    ignored = mblen(NULL, 0);	/* First reset the state. */
-		    if (mblen(buf, (size_t)1) <= 0)
-			n = 2;
-		    else
-			n = 1;
-		}
-	    }
-# endif
-#endif
 	}
 
 	mb_bytelen_tab[i] = n;
     }
-
-#ifdef LEN_FROM_CONV
-    convert_setup(&vimconv, NULL, NULL);
-#endif
 
     /* The cell width depends on the type of multi-byte characters. */
     (void)init_chartab();
@@ -783,30 +612,12 @@ codepage_invalid:
 	set_string_option_direct((char_u *)"fencs", -1,
 		       (char_u *)"ucs-bom,utf-8,default,latin1", OPT_FREE, 0);
 
-#if defined(HAVE_BIND_TEXTDOMAIN_CODESET) && defined(FEAT_GETTEXT)
-    /* GNU gettext 0.10.37 supports this feature: set the codeset used for
-     * translated messages independently from the current locale. */
-    (void)bind_textdomain_codeset(VIMPACKAGE,
-					  enc_utf8 ? "utf-8" : (char *)p_enc);
-#endif
-
-#ifdef WIN32
-    /* When changing 'encoding' while starting up, then convert the command
-     * line arguments from the active codepage to 'encoding'. */
-    if (starting != 0)
-	fix_arg_enc();
-#endif
-
-#ifdef FEAT_AUTOCMD
     /* Fire an autocommand to let people do custom font setup. This must be
      * after Vim has been setup for the new encoding. */
     apply_autocmds(EVENT_ENCODINGCHANGED, NULL, (char_u *)"", FALSE, curbuf);
-#endif
 
-#ifdef FEAT_SPELL
     /* Need to reload spell dictionaries */
     spell_reload();
-#endif
 
     return NULL;
 }
@@ -922,7 +733,6 @@ dbcs_class(lead, trail)
 		unsigned char tb = trail;
 
 		/* convert process code to JIS */
-# if defined(WIN3264) || defined(WIN32UNIX) || defined(MACOS)
 		/* process code is SJIS */
 		if (lb <= 0x9f)
 		    lb = (lb - 0x81) * 2 + 0x21;
@@ -937,20 +747,6 @@ dbcs_class(lead, trail)
 		    tb -= 0x7e;
 		    lb += 1;
 		}
-# else
-		/*
-		 * XXX: Code page identification can not use with all
-		 *	    system! So, some other encoding information
-		 *	    will be needed.
-		 *	    In japanese: SJIS,EUC,UNICODE,(JIS)
-		 *	    Note that JIS-code system don't use as
-		 *	    process code in most system because it uses
-		 *	    escape sequences(JIS is context depend encoding).
-		 */
-		/* assume process code is JAPANESE-EUC */
-		lb &= 0x7f;
-		tb &= 0x7f;
-# endif
 		/* exceptions */
 		switch (lb << 8 | tb)
 		{
@@ -1019,14 +815,6 @@ dbcs_class(lead, trail)
 		if (c1 >= 0xB0 && c1 <= 0xC8)
 		    /* Hangul */
 		    return 20;
-#if defined(WIN3264) || defined(WIN32UNIX)
-		else if (c1 <= 0xA0 || c2 <= 0xA0)
-		    /* Extended Hangul Region : MS UHC(Unified Hangul Code) */
-		    /* c1: 0x81-0xA0 with c2: 0x41-0x5A, 0x61-0x7A, 0x81-0xFE
-		     * c1: 0xA1-0xC6 with c2: 0x41-0x5A, 0x61-0x7A, 0x81-0xA0
-		     */
-		    return 20;
-#endif
 
 		else if (c1 >= 0xCA && c1 <= 0xFD)
 		    /* Hanja */
@@ -1461,23 +1249,10 @@ utf_char2cells(c)
 
     if (c >= 0x100)
     {
-#ifdef USE_WCHAR_FUNCTIONS
-	/*
-	 * Assume the library function wcwidth() works better than our own
-	 * stuff.  It should return 1 for ambiguous width chars!
-	 */
-	int	n = wcwidth(c);
-
-	if (n < 0)
-	    return 6;		/* unprintable, displays <xxxx> */
-	if (n > 1)
-	    return n;
-#else
 	if (!utf_printable(c))
 	    return 6;		/* unprintable, displays <xxxx> */
 	if (intable(doublewidth, sizeof(doublewidth), c))
 	    return 2;
-#endif
     }
 
     /* Characters below 0x100 are influenced by 'isprint' option */
@@ -2491,12 +2266,6 @@ utf_iscomposing(c)
 utf_printable(c)
     int		c;
 {
-#ifdef USE_WCHAR_FUNCTIONS
-    /*
-     * Assume the iswprint() library function works better than our own stuff.
-     */
-    return iswprint(c);
-#else
     /* Sorted list of non-overlapping intervals.
      * 0xd800-0xdfff is reserved for UTF-16, actually illegal. */
     static struct interval nonprint[] =
@@ -2507,7 +2276,6 @@ utf_printable(c)
     };
 
     return !intable(nonprint, sizeof(nonprint), c);
-#endif
 }
 
 /*
@@ -3716,7 +3484,6 @@ theend:
     convert_setup(&vimconv, NULL, NULL);
 }
 
-#if defined(FEAT_GUI_GTK) || defined(PROTO)
 /*
  * Return TRUE if string "s" is a valid utf-8 string.
  * When "end" is NULL stop at the first NUL.
@@ -3744,9 +3511,7 @@ utf_valid_string(s, end)
     }
     return TRUE;
 }
-#endif
 
-#if defined(FEAT_GUI) || defined(PROTO)
 /*
  * Special version of mb_tail_off() for use in ScreenLines[].
  */
@@ -3767,7 +3532,6 @@ dbcs_screen_tail_off(base, p)
     /* Return 1 when on the lead byte, 0 when on the tail byte. */
     return 1 - dbcs_screen_head_off(base, p);
 }
-#endif
 
 /*
  * If the cursor moves on an trail byte, set the cursor on the lead byte.
@@ -3792,14 +3556,11 @@ mb_adjustpos(buf, lp)
     char_u	*p;
 
     if (lp->col > 0
-#ifdef FEAT_VIRTUALEDIT
 	    || lp->coladd > 1
-#endif
 	    )
     {
 	p = ml_get_buf(buf, lp->lnum, FALSE);
 	lp->col -= (*mb_head_off)(p, p + lp->col);
-#ifdef FEAT_VIRTUALEDIT
 	/* Reset "coladd" when the cursor would be on the right half of a
 	 * double-wide character. */
 	if (lp->coladd == 1
@@ -3807,7 +3568,6 @@ mb_adjustpos(buf, lp)
 		&& vim_isprintc((*mb_ptr2char)(p + lp->col))
 		&& ptr2cells(p + lp->col) > 1)
 	    lp->coladd = 0;
-#endif
     }
 }
 
@@ -3844,7 +3604,6 @@ mb_charlen(str)
     return count;
 }
 
-#if defined(FEAT_SPELL) || defined(PROTO)
 /*
  * Like mb_charlen() but for a string with specified length.
  */
@@ -3861,7 +3620,6 @@ mb_charlen_len(str, len)
 
     return count;
 }
-#endif
 
 /*
  * Try to un-escape a multi-byte character.
@@ -3892,9 +3650,7 @@ mb_unescape(pp)
 	    n += 2;
 	}
 	else if ((str[n] == K_SPECIAL
-# ifdef FEAT_GUI
 		    || str[n] == CSI
-# endif
 		 )
 		&& str[n + 1] == KS_EXTRA
 		&& str[n + 2] == (int)KE_CSI)
@@ -3903,9 +3659,7 @@ mb_unescape(pp)
 	    n += 2;
 	}
 	else if (str[n] == K_SPECIAL
-# ifdef FEAT_GUI
 		|| str[n] == CSI
-# endif
 		)
 	    break;		/* a special key can't be a multibyte char */
 	else
@@ -3937,10 +3691,6 @@ mb_lefthalve(row, col)
     int	    row;
     int	    col;
 {
-#ifdef FEAT_HANGULIN
-    if (composing_hangul)
-	return TRUE;
-#endif
     return (*mb_off2cells)(LineOffset[row] + col,
 					LineOffset[row] + screen_Columns) > 1;
 }
@@ -3965,9 +3715,7 @@ mb_fix_col(col, row)
 	return col - 1;
     return col;
 }
-#endif
 
-#if defined(FEAT_MBYTE) || defined(FEAT_POSTSCRIPT) || defined(PROTO)
 static int enc_alias_search __ARGS((char_u *name));
 
 /*
@@ -3998,7 +3746,6 @@ enc_canonize(enc)
     char_u	*p, *s;
     int		i;
 
-# ifdef FEAT_MBYTE
     if (STRCMP(enc, "default") == 0)
     {
 	/* Use the default encoding as it's found by set_init_1(). */
@@ -4007,7 +3754,6 @@ enc_canonize(enc)
 	    r = (char_u *)"latin1";
 	return vim_strsave(r);
     }
-# endif
 
     /* copy "enc" to allocated memory, with room for two '-' */
     r = alloc((unsigned)(STRLEN(enc) + 3));
@@ -4080,9 +3826,7 @@ enc_alias_search(name)
 	    return enc_alias_table[i].canon;
     return -1;
 }
-#endif
 
-#if defined(FEAT_MBYTE) || defined(PROTO)
 
 #ifdef HAVE_LANGINFO_H
 # include <langinfo.h>
@@ -4095,28 +3839,16 @@ enc_alias_search(name)
     char_u *
 enc_locale()
 {
-#ifndef WIN3264
     char	*s;
     char	*p;
     int		i;
-#endif
     char	buf[50];
-#ifdef WIN3264
-    long	acp = GetACP();
-
-    if (acp == 1200)
-	STRCPY(buf, "ucs-2le");
-    else if (acp == 1252)	    /* cp1252 is used as latin1 */
-	STRCPY(buf, "latin1");
-    else
-	sprintf(buf, "cp%ld", acp);
-#else
 # ifdef HAVE_NL_LANGINFO_CODESET
     if ((s = nl_langinfo(CODESET)) == NULL || *s == NUL)
 # endif
-#  if defined(HAVE_LOCALE_H) || defined(X_LOCALE)
+# if defined(HAVE_LOCALE_H) || defined(X_LOCALE)
 	if ((s = setlocale(LC_CTYPE, NULL)) == NULL || *s == NUL)
-#  endif
+# endif
 	    if ((s = getenv("LC_ALL")) == NULL || *s == NUL)
 		if ((s = getenv("LC_CTYPE")) == NULL || *s == NUL)
 		    s = getenv("LANG");
@@ -4157,42 +3889,10 @@ enc_locale()
 	    break;
     }
     buf[i] = NUL;
-#endif
 
     return enc_canonize((char_u *)buf);
 }
 
-#if defined(WIN3264) || defined(PROTO) || defined(FEAT_CYGWIN_WIN32_CLIPBOARD)
-/*
- * Convert an encoding name to an MS-Windows codepage.
- * Returns zero if no codepage can be figured out.
- */
-    int
-encname2codepage(name)
-    char_u	*name;
-{
-    int		cp;
-    char_u	*p = name;
-    int		idx;
-
-    if (STRNCMP(p, "8bit-", 5) == 0)
-	p += 5;
-    else if (STRNCMP(p_enc, "2byte-", 6) == 0)
-	p += 6;
-
-    if (p[0] == 'c' && p[1] == 'p')
-	cp = atoi((char *)p + 2);
-    else if ((idx = enc_canon_search(p)) >= 0)
-	cp = enc_canon_table[idx].codepage;
-    else
-	return 0;
-    if (IsValidCodePage(cp))
-	return cp;
-    return 0;
-}
-#endif
-
-# if defined(USE_ICONV) || defined(PROTO)
 
 static char_u *iconv_string __ARGS((vimconv_T *vcp, char_u *str, int slen, int *unconvlenp, int *resultlenp));
 
@@ -4216,12 +3916,6 @@ my_iconv_open(to, from)
 
     if (iconv_ok == FALSE)
 	return (void *)-1;	/* detected a broken iconv() previously */
-
-#ifdef DYNAMIC_ICONV
-    /* Check if the iconv.dll can be found. */
-    if (!iconv_enabled(TRUE))
-	return (void *)-1;
-#endif
 
     fd = iconv_open((char *)enc_skip(to), (char *)enc_skip(from));
 
@@ -4355,148 +4049,13 @@ int		*resultlenp;
     return result;
 }
 
-#  if defined(DYNAMIC_ICONV) || defined(PROTO)
-/*
- * Dynamically load the "iconv.dll" on Win32.
- */
 
-#ifndef DYNAMIC_ICONV	    /* just generating prototypes */
-# define HINSTANCE int
-#endif
-static HINSTANCE hIconvDLL = 0;
-static HINSTANCE hMsvcrtDLL = 0;
 
-#  ifndef DYNAMIC_ICONV_DLL
-#   define DYNAMIC_ICONV_DLL "iconv.dll"
-#   define DYNAMIC_ICONV_DLL_ALT "libiconv.dll"
-#  endif
-#  ifndef DYNAMIC_MSVCRT_DLL
-#   define DYNAMIC_MSVCRT_DLL "msvcrt.dll"
-#  endif
-
-/*
- * Get the address of 'funcname' which is imported by 'hInst' DLL.
- */
-    static void *
-get_iconv_import_func(HINSTANCE hInst, const char *funcname)
-{
-    PBYTE			pImage = (PBYTE)hInst;
-    PIMAGE_DOS_HEADER		pDOS = (PIMAGE_DOS_HEADER)hInst;
-    PIMAGE_NT_HEADERS		pPE;
-    PIMAGE_IMPORT_DESCRIPTOR	pImpDesc;
-    PIMAGE_THUNK_DATA		pIAT;	    /* Import Address Table */
-    PIMAGE_THUNK_DATA		pINT;	    /* Import Name Table */
-    PIMAGE_IMPORT_BY_NAME	pImpName;
-
-    if (pDOS->e_magic != IMAGE_DOS_SIGNATURE)
-	return NULL;
-    pPE = (PIMAGE_NT_HEADERS)(pImage + pDOS->e_lfanew);
-    if (pPE->Signature != IMAGE_NT_SIGNATURE)
-	return NULL;
-    pImpDesc = (PIMAGE_IMPORT_DESCRIPTOR)(pImage
-	    + pPE->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT]
-							    .VirtualAddress);
-    for (; pImpDesc->FirstThunk; ++pImpDesc)
-    {
-	if (!pImpDesc->OriginalFirstThunk)
-	    continue;
-	pIAT = (PIMAGE_THUNK_DATA)(pImage + pImpDesc->FirstThunk);
-	pINT = (PIMAGE_THUNK_DATA)(pImage + pImpDesc->OriginalFirstThunk);
-	for (; pIAT->u1.Function; ++pIAT, ++pINT)
-	{
-	    if (IMAGE_SNAP_BY_ORDINAL(pINT->u1.Ordinal))
-		continue;
-	    pImpName = (PIMAGE_IMPORT_BY_NAME)(pImage
-					+ (UINT_PTR)(pINT->u1.AddressOfData));
-	    if (strcmp(pImpName->Name, funcname) == 0)
-		return (void *)pIAT->u1.Function;
-	}
-    }
-    return NULL;
-}
-
-/*
- * Try opening the iconv.dll and return TRUE if iconv() can be used.
- */
-    int
-iconv_enabled(verbose)
-    int		verbose;
-{
-    if (hIconvDLL != 0 && hMsvcrtDLL != 0)
-	return TRUE;
-    hIconvDLL = vimLoadLib(DYNAMIC_ICONV_DLL);
-    if (hIconvDLL == 0)		/* sometimes it's called libiconv.dll */
-	hIconvDLL = vimLoadLib(DYNAMIC_ICONV_DLL_ALT);
-    if (hIconvDLL != 0)
-	hMsvcrtDLL = vimLoadLib(DYNAMIC_MSVCRT_DLL);
-    if (hIconvDLL == 0 || hMsvcrtDLL == 0)
-    {
-	/* Only give the message when 'verbose' is set, otherwise it might be
-	 * done whenever a conversion is attempted. */
-	if (verbose && p_verbose > 0)
-	{
-	    verbose_enter();
-	    EMSG2(_(e_loadlib),
-		    hIconvDLL == 0 ? DYNAMIC_ICONV_DLL : DYNAMIC_MSVCRT_DLL);
-	    verbose_leave();
-	}
-	iconv_end();
-	return FALSE;
-    }
-
-    iconv	= (void *)GetProcAddress(hIconvDLL, "libiconv");
-    iconv_open	= (void *)GetProcAddress(hIconvDLL, "libiconv_open");
-    iconv_close	= (void *)GetProcAddress(hIconvDLL, "libiconv_close");
-    iconvctl	= (void *)GetProcAddress(hIconvDLL, "libiconvctl");
-    iconv_errno	= get_iconv_import_func(hIconvDLL, "_errno");
-    if (iconv_errno == NULL)
-	iconv_errno = (void *)GetProcAddress(hMsvcrtDLL, "_errno");
-    if (iconv == NULL || iconv_open == NULL || iconv_close == NULL
-	    || iconvctl == NULL || iconv_errno == NULL)
-    {
-	iconv_end();
-	if (verbose && p_verbose > 0)
-	{
-	    verbose_enter();
-	    EMSG2(_(e_loadfunc), "for libiconv");
-	    verbose_leave();
-	}
-	return FALSE;
-    }
-    return TRUE;
-}
-
-    void
-iconv_end()
-{
-    /* Don't use iconv() when inputting or outputting characters. */
-    if (input_conv.vc_type == CONV_ICONV)
-	convert_setup(&input_conv, NULL, NULL);
-    if (output_conv.vc_type == CONV_ICONV)
-	convert_setup(&output_conv, NULL, NULL);
-
-    if (hIconvDLL != 0)
-	FreeLibrary(hIconvDLL);
-    if (hMsvcrtDLL != 0)
-	FreeLibrary(hMsvcrtDLL);
-    hIconvDLL = 0;
-    hMsvcrtDLL = 0;
-}
-#  endif /* DYNAMIC_ICONV */
-# endif /* USE_ICONV */
-
-#endif /* FEAT_MBYTE */
-
-#if defined(FEAT_XIM) || defined(PROTO)
-
-# ifdef FEAT_GUI_MACVIM
-   typedef int	 GtkIMContext;
-   typedef int * gpointer;
-   typedef char  gchar;
+typedef int	 GtkIMContext;
+typedef int * gpointer;
+typedef char  gchar;
 #  define g_return_if_fail(x) if (!(x)) return;
-# endif
 
-# if defined(FEAT_GUI_GTK) || defined(FEAT_GUI_MACVIM) || defined(PROTO)
 static int xim_has_preediting INIT(= FALSE);  /* IM current status */
 
 /*
@@ -4519,64 +4078,11 @@ static int im_preedit_cursor   = 0;	/* cursor offset in characters       */
 static int im_preedit_trailing = 0;	/* number of characters after cursor */
 
 static unsigned long im_commit_handler_id  = 0;
-# ifndef FEAT_GUI_MACVIM
-static unsigned int  im_activatekey_keyval = GDK_VoidSymbol;
-static unsigned int  im_activatekey_state  = 0;
-# endif
-
-# ifndef FEAT_GUI_MACVIM
-    void
-im_set_active(int active)
-{
-    int was_active;
-
-    was_active = !!im_get_status();
-    im_is_active = (active && !p_imdisable);
-
-    if (im_is_active != was_active)
-	xim_reset();
-}
-# endif
 
     void
 xim_set_focus(int focus)
 {
-# ifndef FEAT_GUI_MACVIM
-    if (xic != NULL)
-    {
-	if (focus)
-	    gtk_im_context_focus_in(xic);
-	else
-	    gtk_im_context_focus_out(xic);
-    }
-# endif
 }
-
-# ifndef FEAT_GUI_MACVIM
-    void
-im_set_position(int row, int col)
-{
-    if (xic != NULL)
-    {
-	GdkRectangle area;
-
-	area.x = FILL_X(col);
-	area.y = FILL_Y(row);
-	area.width  = gui.char_width * (mb_lefthalve(row, col) ? 2 : 1);
-	area.height = gui.char_height;
-
-	gtk_im_context_set_cursor_location(xic, &area);
-    }
-}
-# endif
-
-#  if 0 || defined(PROTO) /* apparently only used in gui_x11.c */
-    void
-xim_set_preedit(void)
-{
-    im_set_position(gui.row, gui.col);
-}
-#  endif
 
     static void
 im_add_to_input(char_u *str, int len)
@@ -4593,10 +4099,6 @@ im_add_to_input(char_u *str, int len)
     if (input_conv.vc_type != CONV_NONE)
 	vim_free(str);
 
-# ifndef FEAT_GUI_MACVIM
-    if (p_mh) /* blank out the pointer if necessary */
-	gui_mch_mousehide(TRUE);
-# endif
 }
 
     static void
@@ -4637,11 +4139,6 @@ im_correct_cursor(int num_move_back)
 	add_to_input_buf(backkey, (int)sizeof(backkey));
 }
 
-# ifndef FEAT_GUI_MACVIM
-static int xim_expected_char = NUL;
-static int xim_ignored_char = FALSE;
-# endif
-
 /*
  * Update the mode and cursor while in an IM callback.
  */
@@ -4659,113 +4156,12 @@ im_show_info(void)
     out_flush();
 }
 
-# ifndef FEAT_GUI_MACVIM
-/*
- * Callback invoked when the user finished preediting.
- * Put the final string into the input buffer.
- */
-    static void
-im_commit_cb(GtkIMContext *context UNUSED,
-	     const gchar *str,
-	     gpointer data UNUSED)
-{
-    int		slen = (int)STRLEN(str);
-    int		add_to_input = TRUE;
-    int		clen;
-    int		len = slen;
-    int		commit_with_preedit = TRUE;
-    char_u	*im_str;
-
-#ifdef XIM_DEBUG
-    xim_log("im_commit_cb(): %s\n", str);
-#endif
-
-    /* The imhangul module doesn't reset the preedit string before
-     * committing.  Call im_delete_preedit() to work around that. */
-    im_delete_preedit();
-
-    /* Indicate that preediting has finished. */
-    if (preedit_start_col == MAXCOL)
-    {
-	init_preedit_start_col();
-	commit_with_preedit = FALSE;
-    }
-
-    /* The thing which setting "preedit_start_col" to MAXCOL means that
-     * "preedit_start_col" will be set forcedly when calling
-     * preedit_changed_cb() next time.
-     * "preedit_start_col" should not reset with MAXCOL on this part. Vim
-     * is simulating the preediting by using add_to_input_str(). when
-     * preedit begin immediately before committed, the typebuf is not
-     * flushed to screen, then it can't get correct "preedit_start_col".
-     * Thus, it should calculate the cells by adding cells of the committed
-     * string. */
-    if (input_conv.vc_type != CONV_NONE)
-    {
-	im_str = string_convert(&input_conv, (char_u *)str, &len);
-	g_return_if_fail(im_str != NULL);
-    }
-    else
-	im_str = (char_u *)str;
-
-    clen = mb_string2cells(im_str, len);
-
-    if (input_conv.vc_type != CONV_NONE)
-	vim_free(im_str);
-    preedit_start_col += clen;
-
-    /* Is this a single character that matches a keypad key that's just
-     * been pressed?  If so, we don't want it to be entered as such - let
-     * us carry on processing the raw keycode so that it may be used in
-     * mappings as <kSomething>. */
-    if (xim_expected_char != NUL)
-    {
-	/* We're currently processing a keypad or other special key */
-	if (slen == 1 && str[0] == xim_expected_char)
-	{
-	    /* It's a match - don't do it here */
-	    xim_ignored_char = TRUE;
-	    add_to_input = FALSE;
-	}
-	else
-	{
-	    /* Not a match */
-	    xim_ignored_char = FALSE;
-	}
-    }
-
-    if (add_to_input)
-	im_add_to_input((char_u *)str, slen);
-
-    /* Inserting chars while "im_is_active" is set does not cause a change of
-     * buffer.  When the chars are committed the buffer must be marked as
-     * changed. */
-    if (!commit_with_preedit)
-	preedit_start_col = MAXCOL;
-
-    /* This flag is used in changed() at next call. */
-    xim_changed_while_preediting = TRUE;
-
-    if (gtk_main_level() > 0)
-	gtk_main_quit();
-}
-# endif
-
 /*
  * Callback invoked after start to the preedit.
  */
-# ifndef FEAT_GUI_MACVIM
-    static void
-im_preedit_start_cb(GtkIMContext *context UNUSED, gpointer data UNUSED)
-# else
     void
 im_preedit_start_macvim()
-# endif
 {
-#ifdef XIM_DEBUG
-    xim_log("im_preedit_start_cb()\n");
-#endif
-
     im_is_active = TRUE;
     preedit_is_active = TRUE;
     gui_update_cursor(TRUE, FALSE);
@@ -4775,13 +4171,8 @@ im_preedit_start_macvim()
 /*
  * Callback invoked after end to the preedit.
  */
-# ifndef FEAT_GUI_MACVIM
-    static void
-im_preedit_end_cb(GtkIMContext *context UNUSED, gpointer data UNUSED)
-# else
     void
 im_preedit_end_macvim()
-# endif
 {
     im_delete_preedit();
 
@@ -4793,7 +4184,6 @@ im_preedit_end_macvim()
     im_show_info();
 }
 
-#ifdef FEAT_GUI_MACVIM
     void
 im_preedit_abandon_macvim()
 {
@@ -4803,7 +4193,6 @@ im_preedit_abandon_macvim()
 
     im_preedit_end_macvim();
 }
-#endif
 
 /*
  * Callback invoked after changes to the preedit string.  If the preedit
@@ -4913,49 +4302,7 @@ im_preedit_changed_macvim(char *preedit_string, int cursor_index)
 	im_add_to_input(str, (int)(p - str));
 	im_correct_cursor(num_move_back);
     }
-
 }
-
-# ifndef FEAT_GUI_MACVIM
-/*
- * Translate the Pango attributes at iter to Vim highlighting attributes.
- * Ignore attributes not supported by Vim highlighting.  This shouldn't have
- * too much impact -- right now we handle even more attributes than necessary
- * for the IM modules I tested with.
- */
-    static int
-translate_pango_attributes(PangoAttrIterator *iter)
-{
-    PangoAttribute  *attr;
-    int		    char_attr = HL_NORMAL;
-
-    attr = pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE);
-    if (attr != NULL && ((PangoAttrInt *)attr)->value
-						 != (int)PANGO_UNDERLINE_NONE)
-	char_attr |= HL_UNDERLINE;
-
-    attr = pango_attr_iterator_get(iter, PANGO_ATTR_WEIGHT);
-    if (attr != NULL && ((PangoAttrInt *)attr)->value >= (int)PANGO_WEIGHT_BOLD)
-	char_attr |= HL_BOLD;
-
-    attr = pango_attr_iterator_get(iter, PANGO_ATTR_STYLE);
-    if (attr != NULL && ((PangoAttrInt *)attr)->value
-						   != (int)PANGO_STYLE_NORMAL)
-	char_attr |= HL_ITALIC;
-
-    attr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND);
-    if (attr != NULL)
-    {
-	const PangoColor *color = &((PangoAttrColor *)attr)->color;
-
-	/* Assume inverse if black background is requested */
-	if ((color->red | color->green | color->blue) == 0)
-	    char_attr |= HL_INVERSE;
-    }
-
-    return char_attr;
-}
-# endif
 
 /*
  * Retrieve the highlighting attributes at column col in the preedit string.
@@ -4964,426 +4311,29 @@ translate_pango_attributes(PangoAttrIterator *iter)
     int
 im_get_feedback_attr(int col)
 {
-# ifndef FEAT_GUI_MACVIM
-    char	    *preedit_string = NULL;
-    PangoAttrList   *attr_list	    = NULL;
-    int		    char_attr	    = -1;
-
-    if (xic == NULL)
-	return char_attr;
-
-    gtk_im_context_get_preedit_string(xic, &preedit_string, &attr_list, NULL);
-
-    if (preedit_string != NULL && attr_list != NULL)
-    {
-	int idx;
-
-	/* Get the byte index as used by PangoAttrIterator */
-	for (idx = 0; col > 0 && preedit_string[idx] != '\0'; --col)
-	    idx += utfc_ptr2len((char_u *)preedit_string + idx);
-
-	if (preedit_string[idx] != '\0')
-	{
-	    PangoAttrIterator	*iter;
-	    int			start, end;
-
-	    char_attr = HL_NORMAL;
-	    iter = pango_attr_list_get_iterator(attr_list);
-
-	    /* Extract all relevant attributes from the list. */
-	    do
-	    {
-		pango_attr_iterator_range(iter, &start, &end);
-
-		if (idx >= start && idx < end)
-		    char_attr |= translate_pango_attributes(iter);
-	    }
-	    while (pango_attr_iterator_next(iter));
-
-	    pango_attr_iterator_destroy(iter);
-	}
-    }
-
-    if (attr_list != NULL)
-	pango_attr_list_unref(attr_list);
-    g_free(preedit_string);
-
-    return char_attr;
-# else
     return HL_UNDERLINE;
-# endif
 }
 
     void
 xim_init(void)
 {
-#ifdef XIM_DEBUG
-    xim_log("xim_init()\n");
-#endif
-
-# ifndef FEAT_GUI_MACVIM
-    g_return_if_fail(gui.drawarea != NULL);
-    g_return_if_fail(gui.drawarea->window != NULL);
-
-    xic = gtk_im_multicontext_new();
-    g_object_ref(xic);
-
-    im_commit_handler_id = g_signal_connect(G_OBJECT(xic), "commit",
-					    G_CALLBACK(&im_commit_cb), NULL);
-    g_signal_connect(G_OBJECT(xic), "preedit_changed",
-		     G_CALLBACK(&im_preedit_changed_cb), NULL);
-    g_signal_connect(G_OBJECT(xic), "preedit_start",
-		     G_CALLBACK(&im_preedit_start_cb), NULL);
-    g_signal_connect(G_OBJECT(xic), "preedit_end",
-		     G_CALLBACK(&im_preedit_end_cb), NULL);
-
-    gtk_im_context_set_client_window(xic, gui.drawarea->window);
-# endif
 }
 
     void
 im_shutdown(void)
 {
-#ifdef XIM_DEBUG
-    xim_log("im_shutdown()\n");
-#endif
-
-# ifndef FEAT_GUI_MACVIM
-    if (xic != NULL)
-    {
-	gtk_im_context_focus_out(xic);
-	g_object_unref(xic);
-	xic = NULL;
-    }
-# endif
     im_is_active = FALSE;
     im_commit_handler_id = 0;
     preedit_start_col = MAXCOL;
     xim_has_preediting = FALSE;
 }
 
-# ifndef FEAT_GUI_MACVIM
-/*
- * Convert the string argument to keyval and state for GdkEventKey.
- * If str is valid return TRUE, otherwise FALSE.
- *
- * See 'imactivatekey' for documentation of the format.
- */
-    static int
-im_string_to_keyval(const char *str, unsigned int *keyval, unsigned int *state)
-{
-    const char	    *mods_end;
-    unsigned	    tmp_keyval;
-    unsigned	    tmp_state = 0;
-
-    mods_end = strrchr(str, '-');
-    mods_end = (mods_end != NULL) ? mods_end + 1 : str;
-
-    /* Parse modifier keys */
-    while (str < mods_end)
-	switch (*str++)
-	{
-	    case '-':							break;
-	    case 'S': case 's': tmp_state |= (unsigned)GDK_SHIFT_MASK;	break;
-	    case 'L': case 'l': tmp_state |= (unsigned)GDK_LOCK_MASK;	break;
-	    case 'C': case 'c': tmp_state |= (unsigned)GDK_CONTROL_MASK;break;
-	    case '1':		tmp_state |= (unsigned)GDK_MOD1_MASK;	break;
-	    case '2':		tmp_state |= (unsigned)GDK_MOD2_MASK;	break;
-	    case '3':		tmp_state |= (unsigned)GDK_MOD3_MASK;	break;
-	    case '4':		tmp_state |= (unsigned)GDK_MOD4_MASK;	break;
-	    case '5':		tmp_state |= (unsigned)GDK_MOD5_MASK;	break;
-	    default:
-		return FALSE;
-	}
-
-    tmp_keyval = gdk_keyval_from_name(str);
-
-    if (tmp_keyval == 0 || tmp_keyval == GDK_VoidSymbol)
-	return FALSE;
-
-    if (keyval != NULL)
-	*keyval = tmp_keyval;
-    if (state != NULL)
-	*state = tmp_state;
-
-    return TRUE;
-}
-
-/*
- * Return TRUE if p_imak is valid, otherwise FALSE.  As a special case, an
- * empty string is also regarded as valid.
- *
- * Note: The numerical key value of p_imak is cached if it was valid; thus
- * boldly assuming im_xim_isvalid_imactivate() will always be called whenever
- * 'imak' changes.  This is currently the case but not obvious -- should
- * probably rename the function for clarity.
- */
-    int
-im_xim_isvalid_imactivate(void)
-{
-    if (p_imak[0] == NUL)
-    {
-	im_activatekey_keyval = GDK_VoidSymbol;
-	im_activatekey_state  = 0;
-	return TRUE;
-    }
-
-    return im_string_to_keyval((const char *)p_imak,
-			       &im_activatekey_keyval,
-			       &im_activatekey_state);
-}
-
-    static void
-im_synthesize_keypress(unsigned int keyval, unsigned int state)
-{
-    GdkEventKey *event;
-
-#  ifdef HAVE_GTK_MULTIHEAD
-    event = (GdkEventKey *)gdk_event_new(GDK_KEY_PRESS);
-    g_object_ref(gui.drawarea->window); /* unreffed by gdk_event_free() */
-#  else
-    event = (GdkEventKey *)g_malloc0((gulong)sizeof(GdkEvent));
-    event->type = GDK_KEY_PRESS;
-#  endif
-    event->window = gui.drawarea->window;
-    event->send_event = TRUE;
-    event->time = GDK_CURRENT_TIME;
-    event->state  = state;
-    event->keyval = keyval;
-    event->hardware_keycode = /* needed for XIM */
-	XKeysymToKeycode(GDK_WINDOW_XDISPLAY(event->window), (KeySym)keyval);
-    event->length = 0;
-    event->string = NULL;
-
-    gtk_im_context_filter_keypress(xic, event);
-
-    /* For consistency, also send the corresponding release event. */
-    event->type = GDK_KEY_RELEASE;
-    event->send_event = FALSE;
-    gtk_im_context_filter_keypress(xic, event);
-
-#  ifdef HAVE_GTK_MULTIHEAD
-    gdk_event_free((GdkEvent *)event);
-#  else
-    g_free(event);
-#  endif
-}
-# endif // FEAT_GUI_MACVIM
-
     void
 xim_reset(void)
 {
-# ifndef FEAT_GUI_MACVIM
-    if (xic != NULL)
-    {
-	gtk_im_context_reset(xic);
-
-	if (p_imdisable)
-	    im_shutdown();
-	else
-	{
-	    xim_set_focus(gui.in_focus);
-
-#  ifdef FEAT_EVAL
-	    if (p_imaf[0] != NUL)
-	    {
-		char_u *argv[1];
-
-		if (im_is_active)
-		    argv[0] = (char_u *)"1";
-		else
-		    argv[0] = (char_u *)"0";
-		(void)call_func_retnr(p_imaf, 1, argv, FALSE);
-	    }
-	    else
-#  endif
-		if (im_activatekey_keyval != GDK_VoidSymbol)
-	    {
-		if (im_is_active)
-		{
-		    g_signal_handler_block(xic, im_commit_handler_id);
-		    im_synthesize_keypress(im_activatekey_keyval,
-						    im_activatekey_state);
-		    g_signal_handler_unblock(xic, im_commit_handler_id);
-		}
-	    }
-	    else
-	    {
-		im_shutdown();
-		xim_init();
-		xim_set_focus(gui.in_focus);
-	    }
-	}
-    }
-# endif
-
     preedit_start_col = MAXCOL;
     xim_has_preediting = FALSE;
 }
-
-# ifndef FEAT_GUI_MACVIM
-    int
-xim_queue_key_press_event(GdkEventKey *event, int down)
-{
-    if (down)
-    {
-	/*
-	 * Workaround GTK2 XIM 'feature' that always converts keypad keys to
-	 * chars., even when not part of an IM sequence (ref. feature of
-	 * gdk/gdkkeyuni.c).
-	 * Flag any keypad keys that might represent a single char.
-	 * If this (on its own - i.e., not part of an IM sequence) is
-	 * committed while we're processing one of these keys, we can ignore
-	 * that commit and go ahead & process it ourselves.  That way we can
-	 * still distinguish keypad keys for use in mappings.
-	 * Also add GDK_space to make <S-Space> work.
-	 */
-	switch (event->keyval)
-	{
-	    case GDK_KP_Add:      xim_expected_char = '+';  break;
-	    case GDK_KP_Subtract: xim_expected_char = '-';  break;
-	    case GDK_KP_Divide:   xim_expected_char = '/';  break;
-	    case GDK_KP_Multiply: xim_expected_char = '*';  break;
-	    case GDK_KP_Decimal:  xim_expected_char = '.';  break;
-	    case GDK_KP_Equal:    xim_expected_char = '=';  break;
-	    case GDK_KP_0:	  xim_expected_char = '0';  break;
-	    case GDK_KP_1:	  xim_expected_char = '1';  break;
-	    case GDK_KP_2:	  xim_expected_char = '2';  break;
-	    case GDK_KP_3:	  xim_expected_char = '3';  break;
-	    case GDK_KP_4:	  xim_expected_char = '4';  break;
-	    case GDK_KP_5:	  xim_expected_char = '5';  break;
-	    case GDK_KP_6:	  xim_expected_char = '6';  break;
-	    case GDK_KP_7:	  xim_expected_char = '7';  break;
-	    case GDK_KP_8:	  xim_expected_char = '8';  break;
-	    case GDK_KP_9:	  xim_expected_char = '9';  break;
-	    case GDK_space:	  xim_expected_char = ' ';  break;
-	    default:		  xim_expected_char = NUL;
-	}
-	xim_ignored_char = FALSE;
-    }
-
-    /*
-     * When typing fFtT, XIM may be activated. Thus it must pass
-     * gtk_im_context_filter_keypress() in Normal mode.
-     * And while doing :sh too.
-     */
-    if (xic != NULL && !p_imdisable
-		    && (State & (INSERT | CMDLINE | NORMAL | EXTERNCMD)) != 0)
-    {
-	/*
-	 * Filter 'imactivatekey' and map it to CTRL-^.  This way, Vim is
-	 * always aware of the current status of IM, and can even emulate
-	 * the activation key for modules that don't support one.
-	 */
-	if (event->keyval == im_activatekey_keyval
-	     && (event->state & im_activatekey_state) == im_activatekey_state)
-	{
-	    unsigned int state_mask;
-
-	    /* Require the state of the 3 most used modifiers to match exactly.
-	     * Otherwise e.g. <S-C-space> would be unusable for other purposes
-	     * if the IM activate key is <S-space>. */
-	    state_mask  = im_activatekey_state;
-	    state_mask |= ((int)GDK_SHIFT_MASK | (int)GDK_CONTROL_MASK
-							| (int)GDK_MOD1_MASK);
-
-	    if ((event->state & state_mask) != im_activatekey_state)
-		return FALSE;
-
-	    /* Don't send it a second time on GDK_KEY_RELEASE. */
-	    if (event->type != GDK_KEY_PRESS)
-		return TRUE;
-
-	    if (map_to_exists_mode((char_u *)"", LANGMAP, FALSE))
-	    {
-		im_set_active(FALSE);
-
-		/* ":lmap" mappings exists, toggle use of mappings. */
-		State ^= LANGMAP;
-		if (State & LANGMAP)
-		{
-		    curbuf->b_p_iminsert = B_IMODE_NONE;
-		    State &= ~LANGMAP;
-		}
-		else
-		{
-		    curbuf->b_p_iminsert = B_IMODE_LMAP;
-		    State |= LANGMAP;
-		}
-		return TRUE;
-	    }
-
-	    return gtk_im_context_filter_keypress(xic, event);
-	}
-
-	/* Don't filter events through the IM context if IM isn't active
-	 * right now.  Unlike with GTK+ 1.2 we cannot rely on the IM module
-	 * not doing anything before the activation key was sent. */
-	if (im_activatekey_keyval == GDK_VoidSymbol || im_is_active)
-	{
-	    int imresult = gtk_im_context_filter_keypress(xic, event);
-
-	    /* Some XIM send following sequence:
-	     * 1. preedited string.
-	     * 2. committed string.
-	     * 3. line changed key.
-	     * 4. preedited string.
-	     * 5. remove preedited string.
-	     * if 3, Vim can't move back the above line for 5.
-	     * thus, this part should not parse the key. */
-	    if (!imresult && preedit_start_col != MAXCOL
-					       && event->keyval == GDK_Return)
-	    {
-		im_synthesize_keypress(GDK_Return, 0U);
-		return FALSE;
-	    }
-
-	    /* If XIM tried to commit a keypad key as a single char.,
-	     * ignore it so we can use the keypad key 'raw', for mappings. */
-	    if (xim_expected_char != NUL && xim_ignored_char)
-		/* We had a keypad key, and XIM tried to thieve it */
-		return FALSE;
-
-	    /* This is supposed to fix a problem with iBus, that space
-	     * characters don't work in input mode. */
-	    xim_expected_char = NUL;
-
-	    /* Normal processing */
-	    return imresult;
-	}
-    }
-
-    return FALSE;
-}
-# endif
-
-# ifndef FEAT_GUI_MACVIM
-    int
-im_get_status(void)
-{
-#  ifdef FEAT_EVAL
-    if (p_imsf[0] != NUL)
-    {
-	int is_active;
-
-	/* FIXME: Don't execute user function in unsafe situation. */
-	if (exiting
-#   ifdef FEAT_AUTOCMD
-		|| is_autocmd_blocked()
-#   endif
-		)
-	    return FALSE;
-	/* FIXME: :py print 'xxx' is shown duplicate result.
-	 * Use silent to avoid it. */
-	++msg_silent;
-	is_active = call_func_retnr(p_imsf, 0, NULL, FALSE);
-	--msg_silent;
-	return (is_active > 0);
-    }
-#  endif
-    return im_is_active;
-}
-# endif
 
     int
 preedit_get_status(void)
@@ -5397,582 +4347,6 @@ im_is_preediting()
     return xim_has_preediting;
 }
 
-# else /* !FEAT_GUI_GTK */
-
-static int	xim_is_active = FALSE;  /* XIM should be active in the current
-					   mode */
-static int	xim_has_focus = FALSE;	/* XIM is really being used for Vim */
-#ifdef FEAT_GUI_X11
-static XIMStyle	input_style;
-static int	status_area_enabled = TRUE;
-#endif
-
-/*
- * Switch using XIM on/off.  This is used by the code that changes "State".
- */
-    void
-im_set_active(active)
-    int		active;
-{
-    if (xic == NULL)
-	return;
-
-    /* If 'imdisable' is set, XIM is never active. */
-    if (p_imdisable)
-	active = FALSE;
-#if !defined(FEAT_GUI_GTK)
-    else if (input_style & XIMPreeditPosition)
-	/* There is a problem in switching XIM off when preediting is used,
-	 * and it is not clear how this can be solved.  For now, keep XIM on
-	 * all the time, like it was done in Vim 5.8. */
-	active = TRUE;
-#endif
-
-    /* Remember the active state, it is needed when Vim gets keyboard focus. */
-    xim_is_active = active;
-    xim_set_preedit();
-}
-
-/*
- * Adjust using XIM for gaining or losing keyboard focus.  Also called when
- * "xim_is_active" changes.
- */
-    void
-xim_set_focus(focus)
-    int		focus;
-{
-    if (xic == NULL)
-	return;
-
-    /*
-     * XIM only gets focus when the Vim window has keyboard focus and XIM has
-     * been set active for the current mode.
-     */
-    if (focus && xim_is_active)
-    {
-	if (!xim_has_focus)
-	{
-	    xim_has_focus = TRUE;
-	    XSetICFocus(xic);
-	}
-    }
-    else
-    {
-	if (xim_has_focus)
-	{
-	    xim_has_focus = FALSE;
-	    XUnsetICFocus(xic);
-	}
-    }
-}
-
-    void
-im_set_position(row, col)
-    int		row UNUSED;
-    int		col UNUSED;
-{
-    xim_set_preedit();
-}
-
-/*
- * Set the XIM to the current cursor position.
- */
-    void
-xim_set_preedit()
-{
-    XVaNestedList attr_list;
-    XRectangle spot_area;
-    XPoint over_spot;
-    int line_space;
-
-    if (xic == NULL)
-	return;
-
-    xim_set_focus(TRUE);
-
-    if (!xim_has_focus)
-    {
-	/* hide XIM cursor */
-	over_spot.x = 0;
-	over_spot.y = -100; /* arbitrary invisible position */
-	attr_list = (XVaNestedList) XVaCreateNestedList(0,
-							XNSpotLocation,
-							&over_spot,
-							NULL);
-	XSetICValues(xic, XNPreeditAttributes, attr_list, NULL);
-	XFree(attr_list);
-	return;
-    }
-
-    if (input_style & XIMPreeditPosition)
-    {
-	if (xim_fg_color == INVALCOLOR)
-	{
-	    xim_fg_color = gui.def_norm_pixel;
-	    xim_bg_color = gui.def_back_pixel;
-	}
-	over_spot.x = TEXT_X(gui.col);
-	over_spot.y = TEXT_Y(gui.row);
-	spot_area.x = 0;
-	spot_area.y = 0;
-	spot_area.height = gui.char_height * Rows;
-	spot_area.width  = gui.char_width * Columns;
-	line_space = gui.char_height;
-	attr_list = (XVaNestedList) XVaCreateNestedList(0,
-					XNSpotLocation, &over_spot,
-					XNForeground, (Pixel) xim_fg_color,
-					XNBackground, (Pixel) xim_bg_color,
-					XNArea, &spot_area,
-					XNLineSpace, line_space,
-					NULL);
-	if (XSetICValues(xic, XNPreeditAttributes, attr_list, NULL))
-	    EMSG(_("E284: Cannot set IC values"));
-	XFree(attr_list);
-    }
-}
-
-#if defined(FEAT_GUI_X11)
-static char e_xim[] = N_("E285: Failed to create input context");
-#endif
-
-#if defined(FEAT_GUI_X11) || defined(PROTO)
-# if defined(XtSpecificationRelease) && XtSpecificationRelease >= 6 && !defined(sun)
-#  define USE_X11R6_XIM
-# endif
-
-static int xim_real_init __ARGS((Window x11_window, Display *x11_display));
-
-
-#ifdef USE_X11R6_XIM
-static void xim_instantiate_cb __ARGS((Display *display, XPointer client_data, XPointer	call_data));
-static void xim_destroy_cb __ARGS((XIM im, XPointer client_data, XPointer call_data));
-
-    static void
-xim_instantiate_cb(display, client_data, call_data)
-    Display	*display;
-    XPointer	client_data UNUSED;
-    XPointer	call_data UNUSED;
-{
-    Window	x11_window;
-    Display	*x11_display;
-
-#ifdef XIM_DEBUG
-    xim_log("xim_instantiate_cb()\n");
-#endif
-
-    gui_get_x11_windis(&x11_window, &x11_display);
-    if (display != x11_display)
-	return;
-
-    xim_real_init(x11_window, x11_display);
-    gui_set_shellsize(FALSE, FALSE, RESIZE_BOTH);
-    if (xic != NULL)
-	XUnregisterIMInstantiateCallback(x11_display, NULL, NULL, NULL,
-					 xim_instantiate_cb, NULL);
-}
-
-    static void
-xim_destroy_cb(im, client_data, call_data)
-    XIM		im UNUSED;
-    XPointer	client_data UNUSED;
-    XPointer	call_data UNUSED;
-{
-    Window	x11_window;
-    Display	*x11_display;
-
-#ifdef XIM_DEBUG
-    xim_log("xim_destroy_cb()\n");
-#endif
-    gui_get_x11_windis(&x11_window, &x11_display);
-
-    xic = NULL;
-    status_area_enabled = FALSE;
-
-    gui_set_shellsize(FALSE, FALSE, RESIZE_BOTH);
-
-    XRegisterIMInstantiateCallback(x11_display, NULL, NULL, NULL,
-				   xim_instantiate_cb, NULL);
-}
-#endif
-
-    void
-xim_init()
-{
-    Window	x11_window;
-    Display	*x11_display;
-
-#ifdef XIM_DEBUG
-    xim_log("xim_init()\n");
-#endif
-
-    gui_get_x11_windis(&x11_window, &x11_display);
-
-    xic = NULL;
-
-    if (xim_real_init(x11_window, x11_display))
-	return;
-
-    gui_set_shellsize(FALSE, FALSE, RESIZE_BOTH);
-
-#ifdef USE_X11R6_XIM
-    XRegisterIMInstantiateCallback(x11_display, NULL, NULL, NULL,
-				   xim_instantiate_cb, NULL);
-#endif
-}
-
-    static int
-xim_real_init(x11_window, x11_display)
-    Window	x11_window;
-    Display	*x11_display;
-{
-    int		i;
-    char	*p,
-		*s,
-		*ns,
-		*end,
-		tmp[1024];
-#define IMLEN_MAX 40
-    char	buf[IMLEN_MAX + 7];
-    XIM		xim = NULL;
-    XIMStyles	*xim_styles;
-    XIMStyle	this_input_style = 0;
-    Boolean	found;
-    XPoint	over_spot;
-    XVaNestedList preedit_list, status_list;
-
-    input_style = 0;
-    status_area_enabled = FALSE;
-
-    if (xic != NULL)
-	return FALSE;
-
-    if (gui.rsrc_input_method != NULL && *gui.rsrc_input_method != NUL)
-    {
-	strcpy(tmp, gui.rsrc_input_method);
-	for (ns = s = tmp; ns != NULL && *s != NUL;)
-	{
-	    s = (char *)skipwhite((char_u *)s);
-	    if (*s == NUL)
-		break;
-	    if ((ns = end = strchr(s, ',')) == NULL)
-		end = s + strlen(s);
-	    while (isspace(((char_u *)end)[-1]))
-		end--;
-	    *end = NUL;
-
-	    if (strlen(s) <= IMLEN_MAX)
-	    {
-		strcpy(buf, "@im=");
-		strcat(buf, s);
-		if ((p = XSetLocaleModifiers(buf)) != NULL && *p != NUL
-			&& (xim = XOpenIM(x11_display, NULL, NULL, NULL))
-								      != NULL)
-		    break;
-	    }
-
-	    s = ns + 1;
-	}
-    }
-
-    if (xim == NULL && (p = XSetLocaleModifiers("")) != NULL && *p != NUL)
-	xim = XOpenIM(x11_display, NULL, NULL, NULL);
-
-    /* This is supposed to be useful to obtain characters through
-     * XmbLookupString() without really using a XIM. */
-    if (xim == NULL && (p = XSetLocaleModifiers("@im=none")) != NULL
-								 && *p != NUL)
-	xim = XOpenIM(x11_display, NULL, NULL, NULL);
-
-    if (xim == NULL)
-    {
-	/* Only give this message when verbose is set, because too many people
-	 * got this message when they didn't want to use a XIM. */
-	if (p_verbose > 0)
-	{
-	    verbose_enter();
-	    EMSG(_("E286: Failed to open input method"));
-	    verbose_leave();
-	}
-	return FALSE;
-    }
-
-#ifdef USE_X11R6_XIM
-    {
-	XIMCallback destroy_cb;
-
-	destroy_cb.callback = xim_destroy_cb;
-	destroy_cb.client_data = NULL;
-	if (XSetIMValues(xim, XNDestroyCallback, &destroy_cb, NULL))
-	    EMSG(_("E287: Warning: Could not set destroy callback to IM"));
-    }
-#endif
-
-    if (XGetIMValues(xim, XNQueryInputStyle, &xim_styles, NULL) || !xim_styles)
-    {
-	EMSG(_("E288: input method doesn't support any style"));
-	XCloseIM(xim);
-	return FALSE;
-    }
-
-    found = False;
-    strcpy(tmp, gui.rsrc_preedit_type_name);
-    for (s = tmp; s && !found; )
-    {
-	while (*s && isspace((unsigned char)*s))
-	    s++;
-	if (!*s)
-	    break;
-	if ((ns = end = strchr(s, ',')) != 0)
-	    ns++;
-	else
-	    end = s + strlen(s);
-	while (isspace((unsigned char)*end))
-	    end--;
-	*end = '\0';
-
-	if (!strcmp(s, "OverTheSpot"))
-	    this_input_style = (XIMPreeditPosition | XIMStatusArea);
-	else if (!strcmp(s, "OffTheSpot"))
-	    this_input_style = (XIMPreeditArea | XIMStatusArea);
-	else if (!strcmp(s, "Root"))
-	    this_input_style = (XIMPreeditNothing | XIMStatusNothing);
-
-	for (i = 0; (unsigned short)i < xim_styles->count_styles; i++)
-	{
-	    if (this_input_style == xim_styles->supported_styles[i])
-	    {
-		found = True;
-		break;
-	    }
-	}
-	if (!found)
-	    for (i = 0; (unsigned short)i < xim_styles->count_styles; i++)
-	    {
-		if ((xim_styles->supported_styles[i] & this_input_style)
-			== (this_input_style & ~XIMStatusArea))
-		{
-		    this_input_style &= ~XIMStatusArea;
-		    found = True;
-		    break;
-		}
-	    }
-
-	s = ns;
-    }
-    XFree(xim_styles);
-
-    if (!found)
-    {
-	/* Only give this message when verbose is set, because too many people
-	 * got this message when they didn't want to use a XIM. */
-	if (p_verbose > 0)
-	{
-	    verbose_enter();
-	    EMSG(_("E289: input method doesn't support my preedit type"));
-	    verbose_leave();
-	}
-	XCloseIM(xim);
-	return FALSE;
-    }
-
-    over_spot.x = TEXT_X(gui.col);
-    over_spot.y = TEXT_Y(gui.row);
-    input_style = this_input_style;
-
-    /* A crash was reported when trying to pass gui.norm_font as XNFontSet,
-     * thus that has been removed.  Hopefully the default works... */
-#ifdef FEAT_XFONTSET
-    if (gui.fontset != NOFONTSET)
-    {
-	preedit_list = XVaCreateNestedList(0,
-				XNSpotLocation, &over_spot,
-				XNForeground, (Pixel)gui.def_norm_pixel,
-				XNBackground, (Pixel)gui.def_back_pixel,
-				XNFontSet, (XFontSet)gui.fontset,
-				NULL);
-	status_list = XVaCreateNestedList(0,
-				XNForeground, (Pixel)gui.def_norm_pixel,
-				XNBackground, (Pixel)gui.def_back_pixel,
-				XNFontSet, (XFontSet)gui.fontset,
-				NULL);
-    }
-    else
-#endif
-    {
-	preedit_list = XVaCreateNestedList(0,
-				XNSpotLocation, &over_spot,
-				XNForeground, (Pixel)gui.def_norm_pixel,
-				XNBackground, (Pixel)gui.def_back_pixel,
-				NULL);
-	status_list = XVaCreateNestedList(0,
-				XNForeground, (Pixel)gui.def_norm_pixel,
-				XNBackground, (Pixel)gui.def_back_pixel,
-				NULL);
-    }
-
-    xic = XCreateIC(xim,
-		    XNInputStyle, input_style,
-		    XNClientWindow, x11_window,
-		    XNFocusWindow, gui.wid,
-		    XNPreeditAttributes, preedit_list,
-		    XNStatusAttributes, status_list,
-		    NULL);
-    XFree(status_list);
-    XFree(preedit_list);
-    if (xic != NULL)
-    {
-	if (input_style & XIMStatusArea)
-	{
-	    xim_set_status_area();
-	    status_area_enabled = TRUE;
-	}
-	else
-	    gui_set_shellsize(FALSE, FALSE, RESIZE_BOTH);
-    }
-    else
-    {
-	EMSG(_(e_xim));
-	XCloseIM(xim);
-	return FALSE;
-    }
-
-    return TRUE;
-}
-
-#endif /* FEAT_GUI_X11 */
-
-/*
- * Get IM status.  When IM is on, return TRUE.  Else return FALSE.
- * FIXME: This doesn't work correctly: Having focus doesn't always mean XIM is
- * active, when not having focus XIM may still be active (e.g., when using a
- * tear-off menu item).
- */
-    int
-im_get_status()
-{
-    return xim_has_focus;
-}
-
-# endif /* !FEAT_GUI_GTK */
-
-# if !(defined(FEAT_GUI_GTK) || defined(FEAT_GUI_MACVIM)) || defined(PROTO)
-/*
- * Set up the status area.
- *
- * This should use a separate Widget, but that seems not possible, because
- * preedit_area and status_area should be set to the same window as for the
- * text input.  Unfortunately this means the status area pollutes the text
- * window...
- */
-    void
-xim_set_status_area()
-{
-    XVaNestedList preedit_list = 0, status_list = 0, list = 0;
-    XRectangle pre_area, status_area;
-
-    if (xic == NULL)
-	return;
-
-    if (input_style & XIMStatusArea)
-    {
-	if (input_style & XIMPreeditArea)
-	{
-	    XRectangle *needed_rect;
-
-	    /* to get status_area width */
-	    status_list = XVaCreateNestedList(0, XNAreaNeeded,
-					      &needed_rect, NULL);
-	    XGetICValues(xic, XNStatusAttributes, status_list, NULL);
-	    XFree(status_list);
-
-	    status_area.width = needed_rect->width;
-	}
-	else
-	    status_area.width = gui.char_width * Columns;
-
-	status_area.x = 0;
-	status_area.y = gui.char_height * Rows + gui.border_offset;
-	if (gui.which_scrollbars[SBAR_BOTTOM])
-	    status_area.y += gui.scrollbar_height;
-#ifdef FEAT_MENU
-	if (gui.menu_is_active)
-	    status_area.y += gui.menu_height;
-#endif
-	status_area.height = gui.char_height;
-	status_list = XVaCreateNestedList(0, XNArea, &status_area, NULL);
-    }
-    else
-    {
-	status_area.x = 0;
-	status_area.y = gui.char_height * Rows + gui.border_offset;
-	if (gui.which_scrollbars[SBAR_BOTTOM])
-	    status_area.y += gui.scrollbar_height;
-#ifdef FEAT_MENU
-	if (gui.menu_is_active)
-	    status_area.y += gui.menu_height;
-#endif
-	status_area.width = 0;
-	status_area.height = gui.char_height;
-    }
-
-    if (input_style & XIMPreeditArea)   /* off-the-spot */
-    {
-	pre_area.x = status_area.x + status_area.width;
-	pre_area.y = gui.char_height * Rows + gui.border_offset;
-	pre_area.width = gui.char_width * Columns - pre_area.x;
-	if (gui.which_scrollbars[SBAR_BOTTOM])
-	    pre_area.y += gui.scrollbar_height;
-#ifdef FEAT_MENU
-	if (gui.menu_is_active)
-	    pre_area.y += gui.menu_height;
-#endif
-	pre_area.height = gui.char_height;
-	preedit_list = XVaCreateNestedList(0, XNArea, &pre_area, NULL);
-    }
-    else if (input_style & XIMPreeditPosition)   /* over-the-spot */
-    {
-	pre_area.x = 0;
-	pre_area.y = 0;
-	pre_area.height = gui.char_height * Rows;
-	pre_area.width = gui.char_width * Columns;
-	preedit_list = XVaCreateNestedList(0, XNArea, &pre_area, NULL);
-    }
-
-    if (preedit_list && status_list)
-	list = XVaCreateNestedList(0, XNPreeditAttributes, preedit_list,
-				   XNStatusAttributes, status_list, NULL);
-    else if (preedit_list)
-	list = XVaCreateNestedList(0, XNPreeditAttributes, preedit_list,
-				   NULL);
-    else if (status_list)
-	list = XVaCreateNestedList(0, XNStatusAttributes, status_list,
-				   NULL);
-    else
-	list = NULL;
-
-    if (list)
-    {
-	XSetICValues(xic, XNVaNestedList, list, NULL);
-	XFree(list);
-    }
-    if (status_list)
-	XFree(status_list);
-    if (preedit_list)
-	XFree(preedit_list);
-}
-
-    int
-xim_get_status_area_height()
-{
-    if (status_area_enabled)
-	return gui.char_height;
-    return 0;
-}
-# endif
-
-#endif /* FEAT_XIM */
-
-#if defined(FEAT_MBYTE) || defined(PROTO)
 
 /*
  * Setup "vcp" for conversion from "from" to "to".
@@ -6010,10 +4384,8 @@ convert_setup_ext(vcp, from, from_unicode_is_utf8, to, to_unicode_is_utf8)
     int		to_is_utf8;
 
     /* Reset to no conversion. */
-# ifdef USE_ICONV
     if (vcp->vc_type == CONV_ICONV && vcp->vc_fd != (iconv_t)-1)
 	iconv_close(vcp->vc_fd);
-# endif
     vcp->vc_type = CONV_NONE;
     vcp->vc_factor = 1;
     vcp->vc_fail = FALSE;
@@ -6056,17 +4428,6 @@ convert_setup_ext(vcp, from, from_unicode_is_utf8, to, to_unicode_is_utf8)
 	/* Internal utf-8 -> latin9 conversion. */
 	vcp->vc_type = CONV_TO_LATIN9;
     }
-#ifdef WIN3264
-    /* Win32-specific codepage <-> codepage conversion without iconv. */
-    else if ((from_is_utf8 || encname2codepage(from) > 0)
-	    && (to_is_utf8 || encname2codepage(to) > 0))
-    {
-	vcp->vc_type = CONV_CODEPAGE;
-	vcp->vc_factor = 2;	/* up to twice as long */
-	vcp->vc_cpfrom = from_is_utf8 ? 0 : encname2codepage(from);
-	vcp->vc_cpto = to_is_utf8 ? 0 : encname2codepage(to);
-    }
-#endif
 #ifdef MACOS_X
     else if ((from_prop & ENC_MACROMAN) && (to_prop & ENC_LATIN1))
     {
@@ -6085,8 +4446,7 @@ convert_setup_ext(vcp, from, from_unicode_is_utf8, to, to_unicode_is_utf8)
     {
 	vcp->vc_type = CONV_UTF8_MAC;
     }
-#endif
-# ifdef USE_ICONV
+#endif /* MACOS_X */
     else
     {
 	/* Use iconv() for conversion. */
@@ -6099,15 +4459,12 @@ convert_setup_ext(vcp, from, from_unicode_is_utf8, to, to_unicode_is_utf8)
 	    vcp->vc_factor = 4;	/* could be longer too... */
 	}
     }
-# endif
     if (vcp->vc_type == CONV_NONE)
 	return FAIL;
 
     return OK;
 }
 
-#if defined(FEAT_GUI) || defined(AMIGA) || defined(WIN3264) \
-	|| defined(MSDOS) || defined(PROTO)
 /*
  * Do conversion on typed input characters in-place.
  * The input and output are not NUL terminated!
@@ -6121,7 +4478,6 @@ convert_input(ptr, len, maxlen)
 {
     return convert_input_safe(ptr, len, maxlen, NULL, NULL);
 }
-#endif
 
 /*
  * Like convert_input(), but when there is an incomplete byte sequence at the
@@ -6355,15 +4711,12 @@ int		*unconvlenp;
             retval = mac_string_convert(ptr, len, lenp, vcp->vc_fail,
                                         'u', 'm', unconvlenp);
             break;
-# endif
+# endif /* MACOS_CONVERT */
             
-# ifdef USE_ICONV
         case CONV_ICONV:	/* conversion with output_conv.vc_fd */
             retval = iconv_string(vcp, ptr, len, unconvlenp, lenp);
             break;
-# endif
     }
     
     return retval;
 }
-#endif
