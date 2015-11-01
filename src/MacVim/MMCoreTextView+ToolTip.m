@@ -205,7 +205,6 @@ static const NSTrackingRectTag kTrackingRectTag = 0xBADFACE;
     }
     if (oldToolTip) {
         [self _sendToolTipMouseExited];
-        [oldToolTip release];
     }
     toolTip_ = [toolTip copy];
     if (toolTip) {
@@ -226,7 +225,7 @@ static const NSTrackingRectTag kTrackingRectTag = 0xBADFACE;
              point:(NSPoint)point
           userData:(void *)data
 {
-    return [[toolTip_ copy] autorelease];
+    return [toolTip_ copy];
 }
 
 @end

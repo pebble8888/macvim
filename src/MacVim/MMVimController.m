@@ -125,7 +125,7 @@ static BOOL isUnsafeMessage(int msgid);
 
     windowController =
         [[MMWindowController alloc] initWithVimController:self];
-    backendProxy = [backend retain];
+    backendProxy = backend;
     popupMenuItems = [[NSMutableArray alloc] init];
     toolbarItemDict = [[NSMutableDictionary alloc] init];
     pid = processIdentifier;
@@ -147,7 +147,7 @@ static BOOL isUnsafeMessage(int msgid);
     mainMenu = [[NSMenu alloc] initWithTitle:@"MainMenu"];
     NSMenuItem *appMenuItem = [[MMAppController sharedInstance]
                                         appMenuItemTemplate];
-    appMenuItem = [[appMenuItem copy] autorelease];
+    appMenuItem = [appMenuItem copy];
 
     // Note: If the title of the application menu is anything but what
     // CFBundleName says then the application menu will not be typeset in
@@ -171,19 +171,18 @@ static BOOL isUnsafeMessage(int msgid);
 
     isInitialized = NO;
 
-    [serverName release];  serverName = nil;
-    [backendProxy release];  backendProxy = nil;
+      serverName = nil;
+      backendProxy = nil;
 
-    [toolbarItemDict release];  toolbarItemDict = nil;
-    [toolbar release];  toolbar = nil;
-    [popupMenuItems release];  popupMenuItems = nil;
-    [windowController release];  windowController = nil;
+      toolbarItemDict = nil;
+      toolbar = nil;
+      popupMenuItems = nil;
+      windowController = nil;
 
-    [vimState release];  vimState = nil;
-    [mainMenu release];  mainMenu = nil;
-    [creationDate release];  creationDate = nil;
+      vimState = nil;
+      mainMenu = nil;
+      creationDate = nil;
 
-    [super dealloc];
 }
 
 - (unsigned)vimControllerId
@@ -234,7 +233,6 @@ static BOOL isUnsafeMessage(int msgid);
 - (void)setServerName:(NSString *)name
 {
     if (name != serverName) {
-        [serverName release];
         serverName = [name copy];
     }
 }
@@ -603,7 +601,6 @@ static BOOL isUnsafeMessage(int msgid);
         if (![[windowController vimView] inLiveResize])
             [windowController setTitle:string];
 
-        [string release];
     } else if (SetDocumentFilenameMsgID == msgid) {
         const void *bytes = [data bytes];
         int len = *((int*)bytes);  bytes += sizeof(int);
@@ -614,7 +611,6 @@ static BOOL isUnsafeMessage(int msgid);
 
             [windowController setDocumentFilename:filename];
 
-            [filename release];
         } else {
             [windowController setDocumentFilename:@""];
         }
@@ -705,7 +701,6 @@ static BOOL isUnsafeMessage(int msgid);
         }
 
         [windowController setFont:font];
-        [name release];
     } else if (SetWideFontMsgID == msgid) {
         const void *bytes = [data bytes];
         float size = *((float*)bytes);  bytes += sizeof(float);
@@ -717,7 +712,6 @@ static BOOL isUnsafeMessage(int msgid);
             NSFont *font = [NSFont fontWithName:name size:size];
             [windowController setWideFont:font];
 
-            [name release];
         } else {
             [windowController setWideFont:nil];
         }
@@ -739,7 +733,6 @@ static BOOL isUnsafeMessage(int msgid);
         SEL sel = NSSelectorFromString(actionName);
         [NSApp sendAction:sel to:nil from:self];
 
-        [actionName release];
     } else if (ShowPopupMenuMsgID == msgid) {
         NSDictionary *attrs = [NSDictionary dictionaryWithData:data];
 
@@ -765,7 +758,6 @@ static BOOL isUnsafeMessage(int msgid);
         NSString *name = [[NSString alloc] initWithData:data
                                                encoding:NSUTF8StringEncoding];
         [self setServerName:name];
-        [name release];
     } else if (EnterFullScreenMsgID == msgid) {
         const void *bytes = [data bytes];
         int fuoptions = *((int*)bytes); bytes += sizeof(int);
@@ -801,8 +793,7 @@ static BOOL isUnsafeMessage(int msgid);
     } else if (SetVimStateMsgID == msgid) {
         NSDictionary *dict = [NSDictionary dictionaryWithData:data];
         if (dict) {
-            [vimState release];
-            vimState = [dict retain];
+            vimState = dict;
         }
     } else if (CloseWindowMsgID == msgid) {
         [self scheduleClose];
@@ -1088,8 +1079,6 @@ static BOOL isUnsafeMessage(int msgid);
         }
     }
 
-    [item release];
-    [menu release];
 }
 
 - (void)addMenuItemWithDescriptor:(NSArray *)desc
@@ -1125,7 +1114,7 @@ static BOOL isUnsafeMessage(int msgid);
         item = [NSMenuItem separatorItem];
         [item setTitle:title];
     } else {
-        item = [[[NSMenuItem alloc] init] autorelease];
+        item = [[NSMenuItem alloc] init];
         [item setTitle:title];
 
         // Note: It is possible to set the action to a message that "doesn't
@@ -1182,7 +1171,6 @@ static BOOL isUnsafeMessage(int msgid);
         return;
     }
 
-    [item retain];
 
     if ([item menu] == [NSApp mainMenu] || ![item menu]) {
         // NOTE: To be on the safe side we try to remove the item from
@@ -1194,7 +1182,6 @@ static BOOL isUnsafeMessage(int msgid);
     if ([item menu])
         [[item menu] removeItem:item];
 
-    [item release];
 }
 
 - (void)enableMenuItemWithDescriptor:(NSArray *)desc state:(BOOL)on
@@ -1235,7 +1222,7 @@ static BOOL isUnsafeMessage(int msgid);
 
     NSImage *img = [NSImage imageNamed:icon];
     if (!img) {
-        img = [[[NSImage alloc] initByReferencingFile:icon] autorelease];
+        img = [[NSImage alloc] initByReferencingFile:icon];
         if (!(img && [img isValid]))
             img = nil;
     }
@@ -1252,7 +1239,6 @@ static BOOL isUnsafeMessage(int msgid);
 
     [toolbarItemDict setObject:item forKey:title];
 
-    [item release];
 }
 
 - (void)addToolbarItemWithLabel:(NSString *)label
@@ -1520,7 +1506,6 @@ static BOOL isUnsafeMessage(int msgid);
                      didEndSelector:@selector(alertDidEnd:code:context:)
                         contextInfo:NULL];
 
-    [alert release];
 }
 
 - (void)handleDeleteSign:(NSDictionary *)attr
@@ -1557,13 +1542,11 @@ static BOOL isUnsafeMessage(int msgid);
 {
     ASLogDebug(@"");
 
-    [textField release];  textField = nil;
-    [super dealloc];
+      textField = nil;
 }
 
 - (void)setTextFieldString:(NSString *)textFieldString
 {
-    [textField release];
     textField = [[NSTextField alloc] init];
     [textField setStringValue:textFieldString];
 }

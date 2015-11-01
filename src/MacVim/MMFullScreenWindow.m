@@ -78,8 +78,8 @@ enum {
     if (self == nil)
         return nil;
 
-    target = [t retain];
-    view = [v retain];
+    target = t;
+    view = v;
 
     [self setHasShadow:NO];
     [self setShowsResizeIndicator:NO];
@@ -114,10 +114,9 @@ enum {
 
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 
-    [target release];  target = nil;
-    [view release];  view = nil;
+      target = nil;
+      view = nil;
 
-    [super dealloc];
 }
 
 - (void)setOptions:(int)opt
@@ -257,7 +256,7 @@ enum {
     }
 
     // fix up target controller
-    [self retain];  // NSWindowController releases us once
+    //[self retain];  // NSWindowController releases us once
     [[self windowController] setWindow:target];
 
     [[view tabBarControl] setStyleNamed:oldTabBarStyle];
@@ -324,7 +323,7 @@ enum {
         CGReleaseDisplayFadeReservation(token);
     }
     
-    [self autorelease]; // Balance the above retain
+    //[self autorelease]; // Balance the above retain
 
     state = LeftFullScreen;
     ASLogDebug(@"Left full-screen");

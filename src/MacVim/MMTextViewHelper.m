@@ -63,8 +63,8 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     if (!(a && b))
         return NO;
 
-    NSString *as = TISGetInputSourceProperty(a, kTISPropertyInputSourceID);
-    NSString *bs = TISGetInputSourceProperty(b, kTISPropertyInputSourceID);
+    NSString *as = (__bridge NSString *)(TISGetInputSourceProperty(a, kTISPropertyInputSourceID));
+    NSString *bs = (__bridge NSString *)(TISGetInputSourceProperty(b, kTISPropertyInputSourceID));
 
     return [as isEqualToString:bs];
 }
@@ -87,10 +87,10 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 {
     ASLogDebug(@"");
 
-    [insertionPointColor release];  insertionPointColor = nil;
-    [markedText release];  markedText = nil;
-    [markedTextAttributes release];  markedTextAttributes = nil;
-    [signImages release];  signImages = nil;
+      insertionPointColor = nil;
+      markedText = nil;
+      markedTextAttributes = nil;
+      signImages = nil;
 
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
     if (asciiImSource) {
@@ -103,7 +103,6 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     }
 #endif
 
-    [super dealloc];
 }
 
 - (void)setTextView:(id)view
@@ -115,8 +114,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 - (void)setInsertionPointColor:(NSColor *)color
 {
     if (color != insertionPointColor) {
-        [insertionPointColor release];
-        insertionPointColor = [color retain];
+        insertionPointColor = color;
     }
 }
 
@@ -151,7 +149,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     // the key down event so keep a local reference to the event.  This is
     // released and set to nil at the end of this method.  Don't make any early
     // returns from this method without releasing and resetting this reference!
-    currentEvent = [event retain];
+    currentEvent = event;
 
     if ([self hasMarkedText]) {
         // HACK! Need to redisplay manually otherwise the marked text may not
@@ -211,7 +209,6 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     if (string)
         [self doKeyDown:string];
 
-    [currentEvent release];
     currentEvent = nil;
 }
 
@@ -589,7 +586,6 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     img = [[NSImage alloc] initWithContentsOfFile:imgName];
     if (img) {
         [signImages setObject:img forKey:imgName];
-        [img autorelease];
     }
 
     return img;
@@ -622,8 +618,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 {
     ASLogDebug(@"%@", attr);
     if (attr != markedTextAttributes) {
-        [markedTextAttributes release];
-        markedTextAttributes = [attr retain];
+        markedTextAttributes = attr;
     }
 }
 
@@ -693,7 +688,6 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     ASLogDebug(@"");
     imRange = NSMakeRange(0, 0);
     markedRange = NSMakeRange(NSNotFound, 0);
-    [markedText release];
     markedText = nil;
 }
 
@@ -803,7 +797,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
             // get an ASCII source for use when IM is deactivated (by Vim).
             asciiImSource = TISCopyCurrentASCIICapableKeyboardInputSource();
             NSString *locale = [[NSLocale currentLocale] localeIdentifier];
-            lastImSource = TISCopyInputSourceForLanguage((CFStringRef)locale);
+            lastImSource = TISCopyInputSourceForLanguage((__bridge CFStringRef)locale);
         }
     }
 #endif

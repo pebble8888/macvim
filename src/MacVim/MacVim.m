@@ -160,7 +160,7 @@ debugStringForMessageQueue(NSArray *queue)
     if (cres > 0) [s appendFormat:@"CreateScrollbarMsgID(%d) ", cres];
     if (dess > 0) [s appendFormat:@"DestroyScrollbarMsgID(%d) ", dess];
 
-    return [s autorelease];
+    return s;
 }
 
 
@@ -202,7 +202,7 @@ debugStringForMessageQueue(NSArray *queue)
                                options:NSLiteralSearch
                                  range:NSMakeRange(0, [string length])];
 
-    return [string autorelease];
+    return string;
 }
 
 - (NSString *)stringByRemovingFindPatterns
@@ -232,7 +232,7 @@ debugStringForMessageQueue(NSArray *queue)
                                options:NSCaseInsensitiveSearch|NSLiteralSearch
                                  range:NSMakeRange(0, [string length])];
 
-    return [string autorelease];
+    return string;
 }
 
 - (NSString *)stringBySanitizingSpotlightSearch
@@ -242,8 +242,7 @@ debugStringForMessageQueue(NSArray *queue)
     if (len > 1024) len = 1024;
     else if (len == 0) return self;
 
-    NSMutableString *string = [[[self substringToIndex:len] mutableCopy]
-                                                                autorelease];
+    NSMutableString *string = [[self substringToIndex:len] mutableCopy];
 
     // Ignore strings with control characters
     NSCharacterSet *controlChars = [NSCharacterSet controlCharacterSet];

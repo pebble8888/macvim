@@ -86,7 +86,6 @@ defaultLineHeightForFont(NSFont *font)
     // temporarily.
     NSLayoutManager *lm = [[NSLayoutManager alloc] init];
     float height = [lm defaultLineHeightForFont:font];
-    [lm release];
 
     return height;
 }
@@ -114,7 +113,7 @@ defaultAdvanceForFont(NSFont *font)
 
     // NOTE!  It does not matter which font is set here, Vim will set its
     // own font on startup anyway.  Just set some bogus values.
-    font = [[NSFont userFixedPitchFontOfSize:0] retain];
+    font = [NSFont userFixedPitchFontOfSize:0];
     cellSize.width = cellSize.height = 1;
 
     // NOTE: If the default changes to 'NO' then the intialization of
@@ -135,20 +134,19 @@ defaultAdvanceForFont(NSFont *font)
 
 - (void)dealloc
 {
-    [font release];  font = nil;
-    [fontWide release];  fontWide = nil;
-    [defaultBackgroundColor release];  defaultBackgroundColor = nil;
-    [defaultForegroundColor release];  defaultForegroundColor = nil;
-    [drawData release];  drawData = nil;
-    [fontCache release];  fontCache = nil;
+      font = nil;
+      fontWide = nil;
+      defaultBackgroundColor = nil;
+      defaultForegroundColor = nil;
+      drawData = nil;
+      fontCache = nil;
 
     [helper setTextView:nil];
-    [helper release];  helper = nil;
+      helper = nil;
 
     if (glyphs) { free(glyphs); glyphs = NULL; }
     if (positions) { free(positions); positions = NULL; }
 
-    [super dealloc];
 }
 
 - (int)maxRows
@@ -178,16 +176,14 @@ defaultAdvanceForFont(NSFont *font)
                         foreground:(NSColor *)fgColor
 {
     if (defaultBackgroundColor != bgColor) {
-        [defaultBackgroundColor release];
-        defaultBackgroundColor = bgColor ? [bgColor retain] : nil;
+        defaultBackgroundColor = bgColor ? bgColor : nil;
     }
 
     // NOTE: The default foreground color isn't actually used for anything, but
     // other class instances might want to be able to access it so it is stored
     // here.
     if (defaultForegroundColor != fgColor) {
-        [defaultForegroundColor release];
-        defaultForegroundColor = fgColor ? [fgColor retain] : nil;
+        defaultForegroundColor = fgColor ? fgColor : nil;
     }
 }
 
@@ -276,8 +272,7 @@ defaultAdvanceForFont(NSFont *font)
     CTFontRef fontRef = CTFontCreateWithFontDescriptor(desc, pt, NULL);
     CFRelease(desc);
 
-    [font release];
-    font = (NSFont*)fontRef;
+    font = (__bridge NSFont*)fontRef;
 
     float cellWidthMultiplier = [[NSUserDefaults standardUserDefaults]
             floatForKey:MMCellWidthMultiplierKey];
@@ -303,8 +298,7 @@ defaultAdvanceForFont(NSFont *font)
     } else if (newFont != fontWide) {
         // NOTE: No need to set point size etc. since this is taken from the
         // regular font when drawing.
-        [fontWide release];
-        fontWide = [newFont retain];
+        fontWide = newFont;
     }
 }
 
@@ -994,7 +988,7 @@ lookupFont(NSMutableArray *fontCache, const unichar *chars,
         CGGlyph glyphs[1];
 
         if (CTFontGetGlyphsForCharacters((CTFontRef)font, chars, glyphs, 1))
-            return (CTFontRef)[font retain];
+            return (CTFontRef)CFBridgingRetain(font);
     }
 
     // Ask Core Text for a font (can be *very* slow, which is why we cache
@@ -1005,7 +999,7 @@ lookupFont(NSMutableArray *fontCache, const unichar *chars,
     CFRelease(strRef);
 
     if (newFontRef)
-        [fontCache addObject:(NSFont *)newFontRef];
+        [fontCache addObject:(__bridge NSFont *)newFontRef];
 
     return newFontRef;
 }
@@ -1159,8 +1153,8 @@ recurseDraw(const unichar *chars, CGGlyph *glyphs, CGPoint *positions,
         xrel += w;
     }
 
-    CTFontRef fontRef = (CTFontRef)(flags & DRAW_WIDE ? [fontWide retain]
-                                                      : [font retain]);
+    CTFontRef fontRef = (__bridge CTFontRef)(flags & DRAW_WIDE ? fontWide
+                                                      : font);
     unsigned traits = 0;
     if (flags & DRAW_ITALIC)
         traits |= kCTFontItalicTrait;

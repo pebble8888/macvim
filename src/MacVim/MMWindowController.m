@@ -145,13 +145,12 @@
                       styleMask:styleMask
                         backing:NSBackingStoreBuffered
                           defer:YES];
-    [win autorelease];
 
     self = [super initWithWindow:win];
     if (!self) return nil;
 
     vimController = controller;
-    decoratedWindow = [win retain];
+    decoratedWindow = win;
 
     // Window cascading is handled by MMAppController.
     [self setShouldCascadeWindows:NO];
@@ -222,12 +221,11 @@
 {
     ASLogDebug(@"");
 
-    [decoratedWindow release];  decoratedWindow = nil;
-    [windowAutosaveKey release];  windowAutosaveKey = nil;
-    [vimView release];  vimView = nil;
-    [toolbar release];  toolbar = nil;
+      decoratedWindow = nil;
+      windowAutosaveKey = nil;
+      vimView = nil;
+      toolbar = nil;
 
-    [super dealloc];
 }
 
 - (NSString *)description
@@ -255,7 +253,6 @@
 
 - (void)setWindowAutosaveKey:(NSString *)key
 {
-    [windowAutosaveKey autorelease];
     windowAutosaveKey = [key copy];
 }
 
@@ -455,8 +452,7 @@
 - (void)setToolbar:(NSToolbar *)theToolbar
 {
     if (theToolbar != toolbar) {
-        [toolbar release];
-        toolbar = [theToolbar retain];
+        toolbar = theToolbar;
     }
 
     // NOTE: Toolbar must be set here or it won't work to show it later.
@@ -643,7 +639,7 @@
 
     // Save the original title, if we haven't already.
     if (lastSetTitle == nil) {
-        lastSetTitle = [[decoratedWindow title] retain];
+        lastSetTitle = [decoratedWindow title];
     }
 
     // NOTE: During live resize Cocoa goes into "event tracking mode".  We have
@@ -700,7 +696,6 @@
     // If we saved the original title while resizing, restore it.
     if (lastSetTitle != nil) {
         [decoratedWindow setTitle:lastSetTitle];
-        [lastSetTitle release];
         lastSetTitle = nil;
     }
 }
@@ -730,7 +725,6 @@
 
         // fullScreenWindow could be non-nil here if this is called multiple
         // times during startup.
-        [fullScreenWindow release];
 
         fullScreenWindow = [[MMFullScreenWindow alloc]
             initWithWindow:decoratedWindow view:vimView backgroundColor:back];
@@ -763,7 +757,6 @@
     if (fullScreenWindow) {
         // Using custom full-screen
         [fullScreenWindow leaveFullScreen];
-        [fullScreenWindow release];
         fullScreenWindow = nil;
 
         // The vim view may be too large to fit the screen, so update it.
