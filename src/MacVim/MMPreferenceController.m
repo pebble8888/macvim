@@ -35,9 +35,9 @@ static void loadSymbols()
     // use dlfcn() instead of the deprecated NSModule api.
     void *ptr;
     if ((ptr = dlsym(RTLD_DEFAULT, "NSImageNamePreferencesGeneral")) != NULL)
-        nsImageNamePreferencesGeneral = *(NSString**)ptr;
+        nsImageNamePreferencesGeneral = (__bridge NSString*)ptr;
     if ((ptr = dlsym(RTLD_DEFAULT, "NSImageNamePreferencesAdvanced")) != NULL)
-        nsImageNamePreferencesAdvanced = *(NSString**)ptr;
+        nsImageNamePreferencesAdvanced = (__bridge NSString*)ptr;
 }
 
 
