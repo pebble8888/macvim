@@ -43,7 +43,6 @@
 	NSSize imageSize = [image size];
     rect.origin.x = NSMidX(rect) - (imageSize.width * 0.5);
     rect.origin.y = NSMidY(rect) - (imageSize.height * 0.5);
-    [image setFlipped:YES];
     [image drawAtPoint:rect.origin fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
 }
 

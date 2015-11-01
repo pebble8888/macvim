@@ -36,22 +36,16 @@
 {
     // Aqua Tabs Images
     aquaTabBg = [[NSImage alloc] initByReferencingFile:[[PSMTabBarControl bundle] pathForImageResource:@"AquaTabsBackground"]];
-    [aquaTabBg setFlipped:YES];
     
     aquaTabBgDown = [[NSImage alloc] initByReferencingFile:[[PSMTabBarControl bundle] pathForImageResource:@"AquaTabsDown"]];
-    [aquaTabBgDown setFlipped:YES];
     
     aquaTabBgDownGraphite = [[NSImage alloc] initByReferencingFile:[[PSMTabBarControl bundle] pathForImageResource:@"AquaTabsDownGraphite"]];
-    [aquaTabBgDown setFlipped:YES];
     
     aquaTabBgDownNonKey = [[NSImage alloc] initByReferencingFile:[[PSMTabBarControl bundle] pathForImageResource:@"AquaTabsDownNonKey"]];
-    [aquaTabBgDown setFlipped:YES];
     
     aquaDividerDown = [[NSImage alloc] initByReferencingFile:[[PSMTabBarControl bundle] pathForImageResource:@"AquaTabsSeparatorDown"]];
-    [aquaDivider setFlipped:NO];
     
     aquaDivider = [[NSImage alloc] initByReferencingFile:[[PSMTabBarControl bundle] pathForImageResource:@"AquaTabsSeparator"]];
-    [aquaDivider setFlipped:NO];
     
     aquaCloseButton = [[NSImage alloc] initByReferencingFile:[[PSMTabBarControl bundle] pathForImageResource:@"AquaTabClose_Front"]];
     aquaCloseButtonDown = [[NSImage alloc] initByReferencingFile:[[PSMTabBarControl bundle] pathForImageResource:@"AquaTabClose_Front_Pressed"]];
@@ -408,7 +402,6 @@
         if([cell closeButtonPressed]) closeButton = aquaCloseButtonDown;
         
         closeButtonSize = [closeButton size];
-        [closeButton setFlipped:YES];
         [closeButton drawAtPoint:closeButtonRect.origin fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
         
         // scoot label over

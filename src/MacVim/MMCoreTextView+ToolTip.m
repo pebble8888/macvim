@@ -19,9 +19,7 @@
  * changes were made to adapt the code to MacVim.
  */
 
-#import "Miscellaneous.h" // Defines MM_ENABLE_ATSUI
-
-#if !MM_ENABLE_ATSUI
+#import "Miscellaneous.h"
 
 #import "MMCoreTextView.h"
 
@@ -232,5 +230,3 @@ static const NSTrackingRectTag kTrackingRectTag = 0xBADFACE;
 }
 
 @end
-
-#endif // !MM_ENABLE_ATSUI

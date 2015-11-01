@@ -18,13 +18,9 @@
  * the view is filled by the text view.
  */
 
-#import "Miscellaneous.h"   // Defines MM_ENABLE_ATSUI
+#import "Miscellaneous.h"
 
-#if MM_ENABLE_ATSUI
-# import "MMAtsuiTextView.h"
-#else
-# import "MMCoreTextView.h"
-#endif
+#import "MMCoreTextView.h"
 #import "MMTextView.h"
 #import "MMVimController.h"
 #import "MMVimView.h"
@@ -97,19 +93,11 @@ enum {
     NSInteger renderer = [ud integerForKey:MMRendererKey];
     ASLogInfo(@"Use renderer=%ld", renderer);
 
-#if MM_ENABLE_ATSUI
-    if (MMRendererATSUI == renderer) {
-        // HACK! 'textView' has type MMTextView, but MMAtsuiTextView is not
-        // derived from MMTextView.
-        textView = [[MMAtsuiTextView alloc] initWithFrame:frame];
-    }
-#else
     if (MMRendererCoreText == renderer) {
         // HACK! 'textView' has type MMTextView, but MMCoreTextView is not
         // derived from MMTextView.
         textView = (MMTextView *)[[MMCoreTextView alloc] initWithFrame:frame];
     }
-#endif
     else {
         // Use Cocoa text system for text rendering.
         textView = [[MMTextView alloc] initWithFrame:frame];
@@ -199,7 +187,7 @@ enum {
             || !([[self window] styleMask] & NSTexturedBackgroundWindowMask))
         return;
 
-    int sw = [NSScroller scrollerWidth];
+    int sw = [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
 
     // add .5 to the pixel locations to put the lines on a pixel boundary.
     // the top and right edges of the rect will be outside of the bounds rect
@@ -701,9 +689,9 @@ enum {
         NSRect rect;
         if ([scroller type] == MMScrollerTypeBottom) {
             rect = [textView rectForColumnsInRange:[scroller range]];
-            rect.size.height = [NSScroller scrollerWidth];
+            rect.size.height = [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
             if (leftSbVisible)
-                rect.origin.x += [NSScroller scrollerWidth];
+                rect.origin.x += [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
 
             // HACK!  Make sure the horizontal scrollbar covers the text view
             // all the way to the right, otherwise it looks ugly when the user
@@ -722,7 +710,7 @@ enum {
             if (NSMaxX(rect) > NSMaxX(textViewFrame))
                 rect.size.width -= NSMaxX(rect) - NSMaxX(textViewFrame);
             if (!rightSbVisible)
-                rect.size.width -= [NSScroller scrollerWidth];
+                rect.size.width -= [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
             if (rect.size.width < 0)
                 rect.size.width = 0;
         } else {
@@ -730,7 +718,7 @@ enum {
             // Adjust for the fact that text layout is flipped.
             rect.origin.y = NSMaxY(textViewFrame) - rect.origin.y
                     - rect.size.height;
-            rect.size.width = [NSScroller scrollerWidth];
+            rect.size.width = [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
             if ([scroller type] == MMScrollerTypeRight)
                 rect.origin.x = NSMaxX(textViewFrame);
 
@@ -752,9 +740,9 @@ enum {
             // Vertical scrollers must not cover the resize box in the
             // bottom-right corner of the window.
             if ([[self window] showsResizeIndicator]  // XXX: make this a flag
-                && rect.origin.y < [NSScroller scrollerWidth]) {
-                rect.size.height -= [NSScroller scrollerWidth] - rect.origin.y;
-                rect.origin.y = [NSScroller scrollerWidth];
+                && rect.origin.y < [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy]) {
+                rect.size.height -= [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy] - rect.origin.y;
+                rect.origin.y = [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
             }
 
             // Make sure scrollbar rect is bounded by the text view frame.
@@ -813,11 +801,11 @@ enum {
         size.height += [[self tabBarControl] frame].size.height;
 
     if ([self bottomScrollbarVisible])
-        size.height += [NSScroller scrollerWidth];
+        size.height += [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
     if ([self leftScrollbarVisible])
-        size.width += [NSScroller scrollerWidth];
+        size.width += [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
     if ([self rightScrollbarVisible])
-        size.width += [NSScroller scrollerWidth];
+        size.width += [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
 
     return size;
 }
@@ -830,15 +818,16 @@ enum {
         rect.size.height -= [[self tabBarControl] frame].size.height;
 
     if ([self bottomScrollbarVisible]) {
-        rect.size.height -= [NSScroller scrollerWidth];
-        rect.origin.y += [NSScroller scrollerWidth];
+        rect.size.height -= [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
+        
+        rect.origin.y += [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
     }
     if ([self leftScrollbarVisible]) {
-        rect.size.width -= [NSScroller scrollerWidth];
-        rect.origin.x += [NSScroller scrollerWidth];
+        rect.size.width -= [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
+        rect.origin.x += [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
     }
     if ([self rightScrollbarVisible])
-        rect.size.width -= [NSScroller scrollerWidth];
+        rect.size.width -= [NSScroller scrollerWidthForControlSize:NSRegularControlSize scrollerStyle:NSScrollerStyleLegacy];
 
     return rect;
 }

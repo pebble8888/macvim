@@ -130,7 +130,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     ASLogDebug(@"%@", event);
 
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
-    if (NULL == TISCopyCurrentKeyboardInputSource) {
+    if (NULL == &TISCopyCurrentKeyboardInputSource) {
 #endif
 
         // NOTE: Check IM state _before_ key has been interpreted or we'll pick
@@ -340,7 +340,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
         // marked text moves outside the view as a result of scrolling.
         [self sendMarkedText:nil position:0];
         [self unmarkText];
-        [[NSInputManager currentInputManager] markedTextAbandoned:self];
+        [[NSTextInputContext currentInputContext] discardMarkedText];
     }
 
     float dx = [event deltaX];
@@ -773,7 +773,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
         rect.origin.y += rect.size.height;
 
     rect.origin = [textView convertPoint:rect.origin toView:nil];
-    rect.origin = [[textView window] convertBaseToScreen:rect.origin];
+    rect.origin = [[textView window] convertRectToScreen:rect].origin;
 
     return rect;
 }
@@ -787,7 +787,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
     // The TIS symbols are weakly linked.
-    if (NULL != TISCopyCurrentKeyboardInputSource) {
+    if (NULL != &TISCopyCurrentKeyboardInputSource) {
         // We get here when compiled on >=10.5 and running on >=10.5.
 
         if (asciiImSource) {
@@ -824,7 +824,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
     // The TIS symbols are weakly linked.
-    if (NULL != TISCopyCurrentKeyboardInputSource) {
+    if (NULL != &TISCopyCurrentKeyboardInputSource) {
         // We get here when compiled on >=10.5 and running on >=10.5.
 
         // Enable IM: switch back to input source used when IM was last on
@@ -862,7 +862,7 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
 - (void)checkImState
 {
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
-    if (imControl && NULL != TISCopyCurrentKeyboardInputSource) {
+    if (imControl && NULL != &TISCopyCurrentKeyboardInputSource) {
         // We get here when compiled on >=10.5 and running on >=10.5.
         TISInputSourceRef cur = TISCopyCurrentKeyboardInputSource();
         BOOL state = !KeyboardInputSourcesEqual(asciiImSource, cur);
@@ -1117,9 +1117,8 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     // the Kotoeri manager "commits" the text on left clicks).
 
     if (event) {
-        NSInputManager *imgr = [NSInputManager currentInputManager];
-        if ([imgr wantsToHandleMouseEvents])
-            return [imgr handleMouseEvent:event];
+        NSTextInputContext* context = [NSTextInputContext currentInputContext];
+        [context handleEvent:event];
     }
 
     return NO;
@@ -1152,7 +1151,8 @@ KeyboardInputSourcesEqual(TISInputSourceRef a, TISInputSourceRef b)
     // that the marked text should be abandoned.  (If pos is set to 0 Vim will
     // send backspace sequences to delete the old marked text.)
     [self sendMarkedText:nil position:-1];
-    [[NSInputManager currentInputManager] markedTextAbandoned:self];
+    NSTextInputContext* context = [NSTextInputContext currentInputContext];
+    [context discardMarkedText];
 }
 
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_6)

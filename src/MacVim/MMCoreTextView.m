@@ -25,9 +25,7 @@
  * resized.
  */
 
-#import "Miscellaneous.h" // Defines MM_ENABLE_ATSUI
-
-#if !MM_ENABLE_ATSUI
+#import "Miscellaneous.h" 
 
 #import "MMAppController.h"
 #import "MMCoreTextView.h"
@@ -1323,5 +1321,3 @@ recurseDraw(const unichar *chars, CGGlyph *glyphs, CGPoint *positions,
 }
 
 @end // MMCoreTextView (Drawing)
-
-#endif // !MM_ENABLE_ATSUI
