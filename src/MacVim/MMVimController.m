@@ -131,7 +131,7 @@ static BOOL isUnsafeMessage(int msgid);
     pid = processIdentifier;
     creationDate = [[NSDate alloc] init];
 
-    NSConnection *connection = [backendProxy connectionForProxy];
+    NSConnection *connection = [(NSDistantObject*)backendProxy connectionForProxy];
 
     // TODO: Check that this will not set the timeout for the root proxy
     // (in MMAppController).
@@ -171,17 +171,17 @@ static BOOL isUnsafeMessage(int msgid);
 
     isInitialized = NO;
 
-      serverName = nil;
-      backendProxy = nil;
+    serverName = nil;
+    backendProxy = nil;
 
-      toolbarItemDict = nil;
-      toolbar = nil;
-      popupMenuItems = nil;
-      windowController = nil;
+    toolbarItemDict = nil;
+    toolbar = nil;
+    popupMenuItems = nil;
+    windowController = nil;
 
-      vimState = nil;
-      mainMenu = nil;
-      creationDate = nil;
+    vimState = nil;
+    mainMenu = nil;
+    creationDate = nil;
 
 }
 
@@ -361,7 +361,7 @@ static BOOL isUnsafeMessage(int msgid);
     if (timeout < 0) timeout = 0;
 
     BOOL sendOk = YES;
-    NSConnection *conn = [backendProxy connectionForProxy];
+    NSConnection *conn = [(NSDistantObject*)backendProxy connectionForProxy];
     NSTimeInterval oldTimeout = [conn requestTimeout];
 
     [conn setRequestTimeout:timeout];
@@ -428,7 +428,7 @@ static BOOL isUnsafeMessage(int msgid);
     return eval;
 }
 
-- (id)backendProxy
+- (id<MMBackendProtocol>)backendProxy
 {
     return backendProxy;
 }
@@ -443,8 +443,8 @@ static BOOL isUnsafeMessage(int msgid);
     isInitialized = NO;
     [toolbar setDelegate:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    //[[backendProxy connectionForProxy] invalidate];
-    //[windowController close];
+    [[(NSDistantObject*)backendProxy connectionForProxy] invalidate];
+    [windowController close];
     [windowController cleanup];
 }
 
@@ -897,7 +897,7 @@ static BOOL isUnsafeMessage(int msgid);
     // avoid waiting forever for it to finish.  We make this a synchronous call
     // so that we can be fairly certain that Vim doesn't think the dialog box
     // is still showing when MacVim has in fact already dismissed it.
-    NSConnection *conn = [backendProxy connectionForProxy];
+    NSConnection *conn = [(NSDistantObject*)backendProxy connectionForProxy];
     NSTimeInterval oldTimeout = [conn requestTimeout];
     [conn setRequestTimeout:MMSetDialogReturnTimeout];
 

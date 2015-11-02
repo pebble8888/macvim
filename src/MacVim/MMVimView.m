@@ -950,7 +950,7 @@ enum {
     id wc = [[self window] windowController];
     if ([wc isKindOfClass:[MMWindowController class]]) {
         MMVimController *vc = [(MMWindowController*)wc vimController];
-        id proxy = [vc backendProxy];
+        id<MMBackendProtocol> proxy = [vc backendProxy];
         connection = [(NSDistantObject*)proxy connectionForProxy];
     }
 

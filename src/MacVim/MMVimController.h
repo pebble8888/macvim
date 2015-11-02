@@ -24,7 +24,7 @@
     unsigned            identifier;
     BOOL                isInitialized;
     MMWindowController  *windowController;
-    id                  backendProxy;
+    id<MMBackendProtocol> backendProxy;
     NSMenu              *mainMenu;
     NSMutableArray      *popupMenuItems;
 
@@ -42,7 +42,7 @@
 
 - (id)initWithBackend:(id)backend pid:(int)processIdentifier;
 - (unsigned)vimControllerId;
-- (id)backendProxy;
+- (id<MMBackendProtocol>)backendProxy;
 - (int)pid;
 - (void)setServerName:(NSString *)name;
 - (NSString *)serverName;

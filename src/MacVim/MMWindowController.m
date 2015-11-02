@@ -648,7 +648,7 @@
     // in event tracking mode since then MacVim could receive DO messages at
     // unexpected times (e.g. when a key equivalent is pressed and the menu bar
     // momentarily lights up).
-    id proxy = [vimController backendProxy];
+    id<MMBackendProtocol> proxy = [vimController backendProxy];
     NSConnection *connection = [(NSDistantObject*)proxy connectionForProxy];
     [connection addRequestMode:NSEventTrackingRunLoopMode];
 }
@@ -658,7 +658,7 @@
     if (!setupDone) return;
 
     // See comment above regarding event tracking mode.
-    id proxy = [vimController backendProxy];
+    id<MMBackendProtocol> proxy = [vimController backendProxy];
     NSConnection *connection = [(NSDistantObject*)proxy connectionForProxy];
     [connection removeRequestMode:NSEventTrackingRunLoopMode];
 
@@ -1393,7 +1393,7 @@
 { 
     // TODO: Can this be done with evaluateExpression: instead?
     BOOL reply = NO;
-    id backendProxy = [vimController backendProxy];
+    id<MMBackendProtocol> backendProxy = [vimController backendProxy];
 
     if (backendProxy) {
         @try {
