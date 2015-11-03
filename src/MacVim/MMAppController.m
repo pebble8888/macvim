@@ -1597,7 +1597,7 @@ fsEventCallback(ConstFSEventStreamRef streamRef,
         NSIndexSet *idxSet = [NSIndexSet indexSetWithVimList:eval];
         if ([idxSet count] > 0) {
             [dict setObject:[files objectsAtIndexes:idxSet]
-                     forKey:[NSValue valueWithPointer:(__bridge const void * _Nullable)(vc)]];
+                     forKey:[NSValue valueWithPointer:(__bridge const void *)(vc)]];
 
             // Remove all the files that were open in this Vim process and
             // create a new expression to evaluate.
@@ -2054,7 +2054,7 @@ fsEventCallback(ConstFSEventStreamRef streamRef,
     NSArray *pathsToWatch = [NSArray arrayWithObject:path];
  
     fsEventStream = FSEventStreamCreate(NULL, &fsEventCallback, NULL,
-            (__bridge CFArrayRef _Nonnull)(pathsToWatch), kFSEventStreamEventIdSinceNow,
+            (__bridge CFArrayRef)(pathsToWatch), kFSEventStreamEventIdSinceNow,
             MMEventStreamLatency, kFSEventStreamCreateFlagNone);
 
     FSEventStreamScheduleWithRunLoop(fsEventStream,
